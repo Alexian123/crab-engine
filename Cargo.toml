@@ -1,0 +1,9 @@
+[workspace]
+resolver = "3"
+
+members = [
+    "crab-engine",
+    "sandbox"
+]
+
+[workspace.dependencies]
