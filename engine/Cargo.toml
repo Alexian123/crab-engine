@@ -1,0 +1,17 @@
+[package]
+name = "engine"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+winit = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+glow = { workspace = true }
+glutin = { workspace = true }
+glutin-winit = { workspace = true }
+raw-window-handle = { workspace = true }
+glam = { workspace = true }
+bytemuck = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
