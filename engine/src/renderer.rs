@@ -22,7 +22,7 @@ impl Renderer {
         Self { gl }
     }
 
-    pub fn render(&self, scene: &Scene, camera: &Camera) {
+    pub fn render(&self, scene: &Scene, camera: &mut dyn Camera) {
         for obj in &scene.objects {
             use glow::HasContext;
 
@@ -36,9 +36,9 @@ impl Renderer {
 
                 let shader = &material.shader();
                 shader.set_uniform("uModel", &obj.model_matrix());
-                shader.set_uniform("uView", &camera.view_matrix());
-                shader.set_uniform("uProjection", &camera.projection_matrix());
-                shader.set_uniform("uCameraPos", &camera.position);
+                shader.set_uniform("uView", &camera.view());
+                shader.set_uniform("uProjection", &camera.projection());
+                shader.set_uniform("uCameraPos", &camera.position());
             }
 
             if let Some(mesh) = &obj.mesh {

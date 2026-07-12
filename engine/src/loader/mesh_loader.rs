@@ -8,9 +8,8 @@ use std::rc::Rc;
 
 #[derive(Debug, Error)]
 pub enum MeshLoadError {
-    #[error("mesh file not found: {0}")]
-    MeshFileNotFound(String),
-
+    //#[error("mesh file not found: {0}")]
+    //MeshFileNotFound(String),
     #[error("invalid mesh: {0}")]
     InvalidMesh(String),
 

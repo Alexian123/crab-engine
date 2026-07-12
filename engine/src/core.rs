@@ -19,7 +19,10 @@ use winit::window::{Window, WindowId};
 
 pub trait Application {
     fn init(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
-    fn update(&mut self, _input: &InputManager, _dt: f32) {}
+    fn update(&mut self, _input: &InputManager, _dt: f32) -> bool {
+        // return true to exit
+        false
+    }
     fn render(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
     fn on_resize(&mut self, _width: u32, _height: u32, _gl: &Rc<glow::Context>) {}
 }
@@ -157,7 +160,9 @@ impl<A: Application> ApplicationHandler for Runner<A> {
                 let now = std::time::Instant::now();
                 let dt = (now - self.last_frame_time).as_secs_f32();
                 self.last_frame_time = now;
-                self.app.update(&self.input, dt);
+                if self.app.update(&self.input, dt) {
+                    event_loop.exit();
+                }
 
                 if let (Some(window), Some(gl_state)) = (&self.window, &self.gl_state) {
                     self.app.render(window, &gl_state.gl);
@@ -171,6 +176,15 @@ impl<A: Application> ApplicationHandler for Runner<A> {
             }
             _ => {}
         }
+    }
+
+    fn device_event(
+        &mut self,
+        _event_loop: &ActiveEventLoop,
+        _device_id: winit::event::DeviceId,
+        event: winit::event::DeviceEvent,
+    ) {
+        self.input.on_device_event(&event);
     }
 }
 

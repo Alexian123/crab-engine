@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use winit::event::{ElementState, MouseButton, WindowEvent};
+use winit::event::{DeviceEvent, ElementState, MouseButton, MouseScrollDelta, WindowEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
 pub struct InputManager {
@@ -16,6 +16,9 @@ pub struct InputManager {
 
     mouse_delta_x: f64,
     mouse_delta_y: f64,
+
+    mouse_wheel_x: f32,
+    mouse_wheel_y: f32,
 }
 
 impl InputManager {
@@ -34,6 +37,9 @@ impl InputManager {
 
             mouse_delta_x: 0.0,
             mouse_delta_y: 0.0,
+
+            mouse_wheel_x: 0.0,
+            mouse_wheel_y: 0.0,
         }
     }
 
@@ -46,6 +52,9 @@ impl InputManager {
 
         self.mouse_delta_x = 0.0;
         self.mouse_delta_y = 0.0;
+
+        self.mouse_wheel_x = 0.0;
+        self.mouse_wheel_y = 0.0;
     }
 
     pub fn on_window_event(&mut self, event: &WindowEvent) {
@@ -78,13 +87,24 @@ impl InputManager {
                 }
             },
 
-            WindowEvent::CursorMoved { position, .. } => {
-                self.mouse_delta_x += position.x - self.mouse_x;
-                self.mouse_delta_y += position.y - self.mouse_y;
+            _ => {}
+        }
+    }
 
-                self.mouse_x = position.x;
-                self.mouse_y = position.y;
+    pub fn on_device_event(&mut self, event: &DeviceEvent) {
+        match event {
+            DeviceEvent::MouseMotion { delta } => {
+                self.mouse_delta_x = delta.0;
+                self.mouse_delta_y = delta.1;
             }
+
+            DeviceEvent::MouseWheel { delta } => match delta {
+                MouseScrollDelta::LineDelta(x, y) => {
+                    self.mouse_wheel_x = *x;
+                    self.mouse_wheel_y = *y;
+                }
+                _ => {}
+            },
 
             _ => {}
         }
@@ -112,5 +132,9 @@ impl InputManager {
 
     pub fn mouse_delta(&self) -> (f64, f64) {
         (self.mouse_delta_x, self.mouse_delta_y)
+    }
+
+    pub fn mouse_wheel(&self) -> (f32, f32) {
+        (self.mouse_wheel_x, self.mouse_wheel_y)
     }
 }
