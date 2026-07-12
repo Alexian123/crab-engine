@@ -1,0 +1,21 @@
+{
+	"shader": {
+		"vertex": "./assets/shaders/static_shader.vert",
+		"fragment": "./assets/shaders/static_shader.frag"
+	},
+
+	"params": {
+		"float3": [
+			{
+				"name": "uColor",
+				"value": [1.0, 1.0, 1.0]
+			}
+		],
+		"textures": [
+			{
+				"name": "uDiffuseMap",
+				"path": "./assets/textures/crate.png"
+			}
+		]
+	}
+}

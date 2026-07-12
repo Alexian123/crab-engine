@@ -11,20 +11,21 @@ use glutin::prelude::*;
 use glutin::surface::{Surface, SwapInterval, WindowSurface};
 use glutin_winit::{DisplayBuilder, GlWindow};
 use raw_window_handle::HasWindowHandle;
+use std::rc::Rc;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 
 pub trait Application {
-    fn init(&mut self, _window: &Window, _gl: &glow::Context) {}
+    fn init(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
     fn update(&mut self, _input: &InputManager, _dt: f32) {}
-    fn render(&mut self, _window: &Window, _gl: &glow::Context) {}
-    fn on_resize(&mut self, _width: u32, _height: u32, _gl: &glow::Context) {}
+    fn render(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
+    fn on_resize(&mut self, _width: u32, _height: u32, _gl: &Rc<glow::Context>) {}
 }
 
 struct GlState {
-    gl: glow::Context,
+    gl: Rc<glow::Context>,
     gl_surface: Surface<WindowSurface>,
     gl_context: PossiblyCurrentContext,
 }
@@ -119,6 +120,8 @@ impl<A: Application> ApplicationHandler for Runner<A> {
             tracing::info!("GL version: {}", gl.get_parameter_string(glow::VERSION));
             tracing::info!("GL renderer: {}", gl.get_parameter_string(glow::RENDERER));
         }
+
+        let gl = Rc::new(gl);
 
         self.app.init(&window, &gl);
 
