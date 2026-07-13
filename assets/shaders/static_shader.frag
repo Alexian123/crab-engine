@@ -10,6 +10,7 @@
 struct Material
 {
     uint indexMask; // b[0:3] = diffuseIndex, b[4:7] = specularIndex, b[8:11] = emissionIndex, b[12:15] = free
+    uint useMask; // b[0] = useDiffuse, b[1] = useSpecular, b[2] = useEmission, b[3:15] = free
     float shininess;
 };
 
@@ -33,10 +34,13 @@ void main() {
     int specularIndex = int((uMaterial.indexMask >> 4) & 0xFu);
     int emissionIndex = int((uMaterial.indexMask >> 8) & 0xFu);
 
+    int useDiffuse = int((uMaterial.useMask >> 0) & 1u);
+    int useSpecular = int((uMaterial.useMask >> 1) & 1u);
+    int useEmission = int((uMaterial.useMask >> 2) & 1u);
+
     Surface surface;
-    surface.diffuseColor = texture(uTextures[diffuseIndex], vUV).rgb;
-    surface.specularColor = texture(uTextures[specularIndex], vUV).rgb;
-    surface.emissionColor = texture(uTextures[emissionIndex], vUV).rgb;
+    surface.diffuseColor = texture(uTextures[diffuseIndex], vUV).rgb * useDiffuse;
+    surface.specularColor = texture(uTextures[specularIndex], vUV).rgb * useSpecular;
     surface.normal = normalize(vNormal);
     surface.fragPos = vFragPos;
     surface.viewDir = normalize(uViewPos - vFragPos);
@@ -66,7 +70,7 @@ void main() {
     }
 
     // self light (emission)
-    result += surface.emissionColor;
+    result += texture(uTextures[emissionIndex], vUV).rgb * useEmission;
 
     FragColor = vec4(result, 1.0);
 }

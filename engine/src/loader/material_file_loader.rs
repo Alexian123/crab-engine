@@ -24,9 +24,15 @@ pub struct ShaderDesc {
 #[derive(Deserialize, Default)]
 pub struct MaterialParams {
     pub shininess: f32,
-    pub diffuse_index: u32,
-    pub specular_index: u32,
-    pub emission_index: u32,
+
+    #[serde(default)]
+    pub diffuse_index: Option<u32>,
+
+    #[serde(default)]
+    pub specular_index: Option<u32>,
+
+    #[serde(default)]
+    pub emission_index: Option<u32>,
 }
 
 #[derive(Debug, Error)]

@@ -5,7 +5,6 @@ struct Surface
 {
     vec3 diffuseColor;
     vec3 specularColor;
-    vec3 emissionColor;
     vec3 normal;
     vec3 fragPos;
     vec3 viewDir;
