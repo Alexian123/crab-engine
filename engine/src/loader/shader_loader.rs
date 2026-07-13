@@ -1,31 +1,20 @@
+pub use crate::renderer::ShaderProgram;
+use crate::utils::preprocess_shader;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use thiserror::Error;
 
-pub use crate::renderer::ShaderProgram;
-
 #[derive(Debug, Error)]
 pub enum ShaderLoadError {
-    #[error("failed to read vertex shader '{path}'")]
-    VertexShaderRead {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("failed to read fragment shader '{path}'")]
-    FragmentShaderRead {
-        path: PathBuf,
-        #[source]
-        source: std::io::Error,
-    },
-
     #[error("failed to create shader program: {0}")]
     ShaderProgramCreate(String),
 
-    #[error("path canonicalization failed: {0}")]
-    PathCanonicalization(#[source] std::io::Error),
+    #[error("failed to read shader: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("preprocess: {0}")]
+    Preprocess(#[from] crate::utils::shader_preprocessor::ShaderPreprocessError),
 }
 
 #[derive(Hash, Eq, PartialEq)]
@@ -56,10 +45,8 @@ impl ShaderLoader {
         P1: AsRef<Path>,
         P2: AsRef<Path>,
     {
-        let vert_path = std::fs::canonicalize(vert_path.as_ref())
-            .map_err(ShaderLoadError::PathCanonicalization)?;
-        let frag_path = std::fs::canonicalize(frag_path.as_ref())
-            .map_err(ShaderLoadError::PathCanonicalization)?;
+        let vert_path = std::fs::canonicalize(vert_path.as_ref())?;
+        let frag_path = std::fs::canonicalize(frag_path.as_ref())?;
         let key = ShaderKey {
             vertex: vert_path,
             fragment: frag_path,
@@ -69,26 +56,12 @@ impl ShaderLoader {
             return Ok(Rc::clone(shader));
         }
 
-        let vertex_code = std::fs::read_to_string(&key.vertex).map_err(|e| {
-            ShaderLoadError::VertexShaderRead {
-                path: key.vertex.clone(),
-                source: e,
-            }
-        })?;
-        let fragment_code = std::fs::read_to_string(&key.fragment).map_err(|e| {
-            ShaderLoadError::FragmentShaderRead {
-                path: key.fragment.clone(),
-                source: e,
-            }
-        })?;
+        let vertex_source = preprocess_shader(&key.vertex)?;
+        let fragment_source = preprocess_shader(&key.fragment)?;
 
         let shader = Rc::new(
-            ShaderProgram::new(
-                Rc::clone(&self.gl),
-                vertex_code.as_str(),
-                fragment_code.as_str(),
-            )
-            .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
+            ShaderProgram::new(Rc::clone(&self.gl), &vertex_source, &fragment_source)
+                .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
         );
 
         self.cache.insert(key, Rc::clone(&shader));

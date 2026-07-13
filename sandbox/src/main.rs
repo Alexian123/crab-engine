@@ -4,7 +4,6 @@ use engine::renderer::Renderer;
 use engine::scene::{FlyCamera, Object, Scene};
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
-use std::cell::RefCell;
 use std::rc::Rc;
 use winit::dpi::PhysicalSize;
 use winit::event::MouseButton;
@@ -13,7 +12,7 @@ use winit::window::{CursorGrabMode, Window};
 
 struct Sandbox {
     renderer: Option<Renderer>,
-    loader: Option<RefCell<Loader>>,
+    loader: Option<Loader>,
     scene: Scene,
     camera: FlyCamera,
 }
@@ -32,21 +31,13 @@ impl Application for Sandbox {
             gl.clear_color(0.1, 0.1, 0.15, 1.0);
         }
         self.renderer = Some(Renderer::new(Rc::clone(gl)));
-        self.loader = Some(RefCell::new(Loader::new(Rc::clone(gl))));
+        self.loader = Some(Loader::new(Rc::clone(gl)));
 
-        let cube_mesh = self
-            .loader
-            .as_ref()
-            .unwrap()
-            .borrow_mut()
-            .load_cube_mesh()
-            .unwrap();
+        let loader = self.loader.as_mut().unwrap();
 
-        let crate_material = self
-            .loader
-            .as_ref()
-            .unwrap()
-            .borrow_mut()
+        let cube_mesh = loader.load_cube_mesh().unwrap();
+
+        let crate_material = loader
             .load_material("./assets/materials/crate.mat")
             .unwrap();
 

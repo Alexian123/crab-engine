@@ -13,8 +13,8 @@ pub enum MeshLoadError {
     #[error("invalid mesh: {0}")]
     InvalidMesh(String),
 
-    #[error("path canonicalization failed: {0}")]
-    PathCanonicalization(#[source] std::io::Error),
+    #[error("failed to load mesh: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 pub struct MeshLoader {
@@ -31,8 +31,7 @@ impl MeshLoader {
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Rc<Mesh>, MeshLoadError> {
-        let path =
-            std::fs::canonicalize(path.as_ref()).map_err(MeshLoadError::PathCanonicalization)?;
+        let path = std::fs::canonicalize(path.as_ref())?;
 
         if let Some(mesh) = self.cache.get(&path) {
             return Ok(Rc::clone(mesh));

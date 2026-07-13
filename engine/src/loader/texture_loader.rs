@@ -6,8 +6,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum TextureLoadError {
-    #[error("path canonicalization failed: {0}")]
-    PathCanonicalization(#[source] std::io::Error),
+    #[error("failed to load texture: {0}")]
+    Io(#[from] std::io::Error),
 
     #[error("failed to load image")]
     ImageLoad(#[source] image::ImageError),
@@ -30,8 +30,7 @@ impl TextureLoader {
     }
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Rc<Texture>, TextureLoadError> {
-        let path =
-            std::fs::canonicalize(path.as_ref()).map_err(TextureLoadError::PathCanonicalization)?;
+        let path = std::fs::canonicalize(path.as_ref())?;
         if let Some(texture) = self.cache.get(&path) {
             return Ok(texture.clone());
         }
