@@ -31,8 +31,9 @@ impl TextureLoader {
 
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Rc<Texture>, TextureLoadError> {
         let path = std::fs::canonicalize(path.as_ref())?;
+
         if let Some(texture) = self.cache.get(&path) {
-            return Ok(texture.clone());
+            return Ok(Rc::clone(texture));
         }
 
         let image = image::open(&path).map_err(TextureLoadError::ImageLoad)?;
@@ -48,7 +49,7 @@ impl TextureLoader {
                 .map_err(TextureLoadError::TextureCreate)?,
         );
 
-        self.cache.insert(path, texture.clone());
+        self.cache.insert(path, Rc::clone(&texture));
         Ok(texture)
     }
 }

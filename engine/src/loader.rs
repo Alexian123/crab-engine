@@ -43,37 +43,22 @@ impl Loader {
                 let shader =
                     self.load_shader(&material_file.shader.vertex, &material_file.shader.fragment)?;
 
-                let params = &material_file.params;
                 let mut material = Material::new(shader);
 
-                // float params
-                for param in &params.float {
-                    material.set_float(&param.name, param.value);
-                }
-
-                // float2 params
-                for param in &params.float2 {
-                    material.set_float2(&param.name, param.value);
-                }
-
-                // float3 params
-                for param in &params.float3 {
-                    material.set_float3(&param.name, param.value);
-                }
-
-                // float4 params
-                for param in &params.float4 {
-                    material.set_float4(&param.name, param.value);
-                }
-
-                // textures
-                for param in &params.textures {
-                    if let Some(texture) = self.load_texture(&param.path) {
-                        material.set_texture(&param.name, texture);
+                for texture_path in &material_file.textures {
+                    if let Some(texture) = self.load_texture(texture_path) {
+                        material.textures.push(texture);
                     } else {
-                        tracing::error!("Failed to load texture: {}", param.path);
+                        tracing::error!("Failed to load texture: {}", texture_path);
                     }
                 }
+
+                let params = &material_file.params;
+
+                material.shininess = params.shininess;
+                material.diffuse_index = params.diffuse_index;
+                material.specular_index = params.specular_index;
+                material.emission_index = params.emission_index;
 
                 let material = Rc::new(material);
                 self.material_cache.insert(path, Rc::clone(&material));

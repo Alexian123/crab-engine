@@ -1,7 +1,7 @@
 use engine::glow::{self, HasContext};
 use engine::loader::Loader;
 use engine::renderer::Renderer;
-use engine::scene::{FlyCamera, Object, Scene};
+use engine::scene::*;
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
 use std::rc::Rc;
@@ -29,6 +29,7 @@ impl Application for Sandbox {
 
         unsafe {
             gl.clear_color(0.1, 0.1, 0.15, 1.0);
+            gl.enable(glow::DEPTH_TEST);
         }
         self.renderer = Some(Renderer::new(Rc::clone(gl)));
         self.loader = Some(Loader::new(Rc::clone(gl)));
@@ -44,15 +45,64 @@ impl Application for Sandbox {
         let crate_object = Object::new(
             Some(Rc::clone(&cube_mesh)),
             Some(Rc::clone(&crate_material)),
-            Vec3::new(0.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, -2.0),
             Quat::IDENTITY,
             Vec3::new(1.0, 1.0, 1.0),
         );
         self.scene.objects.push(crate_object);
 
-        unsafe {
-            gl.enable(glow::DEPTH_TEST);
-        }
+        self.scene.directional_lights.push(DirectionalLight {
+            color: LightColor {
+                ambient: Vec3::new(0.05, 0.05, 0.05),
+                diffuse: Vec3::new(0.4, 0.4, 0.4),
+                specular: Vec3::new(0.5, 0.5, 0.5),
+            },
+            direction: Vec3::new(-0.2, -1.0, -0.3),
+        });
+
+        self.scene.point_lights.push(PointLight {
+            color: LightColor {
+                ambient: Vec3::new(0.05, 0.05, 0.05),
+                diffuse: Vec3::new(0.8, 0.8, 0.8),
+                specular: Vec3::new(1.0, 1.0, 1.0),
+            },
+            position: Vec3::new(1.2, 1.0, 2.0),
+            constant: 1.0,
+            linear: 0.09,
+            quadratic: 0.032,
+        });
+        self.scene.point_lights.push(PointLight {
+            color: LightColor {
+                ambient: Vec3::new(0.05, 0.05, 0.05),
+                diffuse: Vec3::new(0.8, 0.8, 0.8),
+                specular: Vec3::new(1.0, 1.0, 1.0),
+            },
+            position: Vec3::new(1.0, 2.0, 2.0),
+            constant: 1.0,
+            linear: 0.09,
+            quadratic: 0.032,
+        });
+
+        self.scene.spot_lights.push(SpotLight {
+            pl: PointLight {
+                color: LightColor {
+                    ambient: Vec3::new(0.0, 0.0, 0.0),
+                    diffuse: Vec3::new(1.0, 1.0, 1.0),
+                    specular: Vec3::new(1.0, 1.0, 1.0),
+                },
+                position: Vec3::new(0.0, 0.0, 0.0),
+                constant: 1.0,
+                linear: 0.09,
+                quadratic: 0.032,
+            },
+            direction: Vec3::new(0.0, 0.0, 0.0),
+            cutoff: (12.5 as f32).to_radians().cos(),
+            outer_cutoff: (15.0 as f32).to_radians().cos(),
+        });
+
+        self.scene.lights_mask = (self.scene.directional_lights.len() as u32)
+            | (((self.scene.point_lights.len() as u32) & 0xFF) << 8)
+            | (((self.scene.spot_lights.len() as u32) & 0xFF) << 16)
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
@@ -70,6 +120,11 @@ impl Application for Sandbox {
             let sensitivity = 0.1;
             self.camera.move_yaw(delta.0 as f32 * sensitivity);
             self.camera.move_pitch(-delta.1 as f32 * sensitivity);
+        }
+
+        self.scene.lights_mask &= 0xFFFF;
+        if input.is_mouse_down(MouseButton::Left) {
+            self.scene.lights_mask |= 1 << 16;
         }
 
         let camera_speed = dt * 2.5;
@@ -91,6 +146,10 @@ impl Application for Sandbox {
         if input.is_key_down(KeyCode::ControlLeft) {
             self.camera.move_y(-camera_speed);
         }
+
+        // update spot light position and direction to simulate FPS flashlight
+        self.scene.spot_lights[0].pl.position = self.camera.position();
+        self.scene.spot_lights[0].direction = self.camera.front();
 
         false
     }
@@ -118,6 +177,10 @@ fn main() {
         loader: None,
         scene: Scene {
             objects: Vec::new(),
+            directional_lights: Vec::new(),
+            point_lights: Vec::new(),
+            spot_lights: Vec::new(),
+            lights_mask: 0,
         },
         camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 100.0),
     };

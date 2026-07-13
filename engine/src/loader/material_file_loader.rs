@@ -10,6 +10,8 @@ pub struct MaterialFile {
     pub shader: ShaderDesc,
 
     #[serde(default)]
+    pub textures: Vec<String>,
+
     pub params: MaterialParams,
 }
 
@@ -21,50 +23,10 @@ pub struct ShaderDesc {
 
 #[derive(Deserialize, Default)]
 pub struct MaterialParams {
-    #[serde(default)]
-    pub float: Vec<FloatParam>,
-
-    #[serde(default)]
-    pub float2: Vec<Float2Param>,
-
-    #[serde(default)]
-    pub float3: Vec<Float3Param>,
-
-    #[serde(default)]
-    pub float4: Vec<Float4Param>,
-
-    #[serde(default)]
-    pub textures: Vec<TextureParam>,
-}
-
-#[derive(Deserialize)]
-pub struct FloatParam {
-    pub name: String,
-    pub value: f32,
-}
-
-#[derive(Deserialize)]
-pub struct Float2Param {
-    pub name: String,
-    pub value: glam::Vec2,
-}
-
-#[derive(Deserialize)]
-pub struct Float3Param {
-    pub name: String,
-    pub value: glam::Vec3,
-}
-
-#[derive(Deserialize)]
-pub struct Float4Param {
-    pub name: String,
-    pub value: glam::Vec4,
-}
-
-#[derive(Deserialize)]
-pub struct TextureParam {
-    pub name: String,
-    pub path: String,
+    pub shininess: f32,
+    pub diffuse_index: u32,
+    pub specular_index: u32,
+    pub emission_index: u32,
 }
 
 #[derive(Debug, Error)]

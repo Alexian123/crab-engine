@@ -1,26 +1,27 @@
 pub use crate::renderer::ShaderProgram;
 pub use crate::renderer::Texture;
-use std::collections::HashMap;
 use std::rc::Rc;
 
 pub struct Material {
     shader: Rc<ShaderProgram>,
-    textures: Vec<(String, Rc<Texture>)>,
-    float_params: HashMap<String, f32>,
-    float2_params: HashMap<String, glam::Vec2>,
-    float3_params: HashMap<String, glam::Vec3>,
-    float4_params: HashMap<String, glam::Vec4>,
+    pub textures: Vec<Rc<Texture>>,
+    pub shininess: f32,
+    pub diffuse_index: u32,
+    pub specular_index: u32,
+    pub emission_index: u32,
 }
 
 impl Material {
+    pub const MAX_TEXTURES: usize = 16;
+
     pub fn new(shader: Rc<ShaderProgram>) -> Self {
         Self {
             shader,
-            textures: Vec::new(),
-            float_params: HashMap::new(),
-            float2_params: HashMap::new(),
-            float3_params: HashMap::new(),
-            float4_params: HashMap::new(),
+            textures: Vec::with_capacity(16),
+            shininess: 32.0,
+            diffuse_index: 0,
+            specular_index: 1,
+            emission_index: 2,
         }
     }
 
@@ -28,47 +29,21 @@ impl Material {
         &self.shader
     }
 
-    pub fn set_texture(&mut self, name: &str, texture: Rc<Texture>) {
-        self.textures.push((name.to_string(), texture));
-    }
-
-    pub fn set_float(&mut self, name: &str, value: f32) {
-        self.float_params.insert(name.to_string(), value);
-    }
-
-    pub fn set_float2(&mut self, name: &str, value: glam::Vec2) {
-        self.float2_params.insert(name.to_string(), value);
-    }
-
-    pub fn set_float3(&mut self, name: &str, value: glam::Vec3) {
-        self.float3_params.insert(name.to_string(), value);
-    }
-
-    pub fn set_float4(&mut self, name: &str, value: glam::Vec4) {
-        self.float4_params.insert(name.to_string(), value);
-    }
-
     pub fn bind(&self) {
         self.shader.bind();
 
-        for (name, param) in &self.float_params {
-            self.shader.set_uniform(name, param);
+        for i in 0..self.textures.len().min(Self::MAX_TEXTURES) {
+            let texture = &self.textures[i];
+            texture.bind(i as u32);
+            self.shader
+                .set_uniform(format!("uTextures[{}]", i).as_str(), &(i as i32)); // MUST BE i32 for Sampler2D, u32 will not work
         }
 
-        for (name, value) in &self.float2_params {
-            self.shader.set_uniform(name, value);
-        }
+        let index_mask: u32 =
+            (self.emission_index << 8) | (self.specular_index << 4) | self.diffuse_index;
 
-        for (name, value) in &self.float3_params {
-            self.shader.set_uniform(name, value);
-        }
-
-        for (name, value) in &self.float4_params {
-            self.shader.set_uniform(name, value);
-        }
-
-        for (index, (name, texture)) in self.textures.iter().enumerate() {
-            self.shader.set_texture(name, texture, index as u32);
-        }
+        self.shader.set_uniform("uMaterial.indexMask", &index_mask);
+        self.shader
+            .set_uniform("uMaterial.shininess", &self.shininess);
     }
 }

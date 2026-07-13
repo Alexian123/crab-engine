@@ -31,4 +31,9 @@ impl Object {
     pub fn model_matrix(&self) -> Mat4 {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.position)
     }
+
+    pub fn normal_matrix(&self) -> Mat4 {
+        let model = self.model_matrix();
+        Mat4::from_mat3(Mat3::from_mat4(model.inverse().transpose()))
+    }
 }

@@ -35,10 +35,87 @@ impl Renderer {
                 material.bind();
 
                 let shader = &material.shader();
+
                 shader.set_uniform("uModel", &obj.model_matrix());
+                shader.set_uniform("uNormal", &obj.normal_matrix());
+
                 shader.set_uniform("uView", &camera.view());
                 shader.set_uniform("uProjection", &camera.projection());
-                shader.set_uniform("uCameraPos", &camera.position());
+                shader.set_uniform("uViewPos", &camera.position());
+
+                // directional lights
+                for (i, light) in scene.directional_lights.iter().enumerate() {
+                    shader.set_uniform(&format!("uDirLights[{}].direction", i), &light.direction);
+                    shader.set_uniform(
+                        &format!("uDirLights[{}].color.ambient", i),
+                        &light.color.ambient,
+                    );
+                    shader.set_uniform(
+                        &format!("uDirLights[{}].color.diffuse", i),
+                        &light.color.diffuse,
+                    );
+                    shader.set_uniform(
+                        &format!("uDirLights[{}].color.specular", i),
+                        &light.color.specular,
+                    );
+                }
+
+                // point lights
+                for (i, light) in scene.point_lights.iter().enumerate() {
+                    shader.set_uniform(&format!("uPointLights[{}].position", i), &light.position);
+                    shader.set_uniform(
+                        &format!("uPointLights[{}].color.ambient", i),
+                        &light.color.ambient,
+                    );
+                    shader.set_uniform(
+                        &format!("uPointLights[{}].color.diffuse", i),
+                        &light.color.diffuse,
+                    );
+                    shader.set_uniform(
+                        &format!("uPointLights[{}].color.specular", i),
+                        &light.color.specular,
+                    );
+                    shader.set_uniform(&format!("uPointLights[{}].constant", i), &light.constant);
+                    shader.set_uniform(&format!("uPointLights[{}].linear", i), &light.linear);
+                    shader.set_uniform(&format!("uPointLights[{}].quadratic", i), &light.quadratic);
+                }
+
+                // spot lights
+                for (i, light) in scene.spot_lights.iter().enumerate() {
+                    shader.set_uniform(&format!("uSpotLights[{}].direction", i), &light.direction);
+                    shader.set_uniform(&format!("uSpotLights[{}].cutOff", i), &light.cutoff);
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].outerCutOff", i),
+                        &light.outer_cutoff,
+                    );
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.position", i),
+                        &light.pl.position,
+                    );
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.constant", i),
+                        &light.pl.constant,
+                    );
+                    shader.set_uniform(&format!("uSpotLights[{}].pl.linear", i), &light.pl.linear);
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.quadratic", i),
+                        &light.pl.quadratic,
+                    );
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.color.ambient", i),
+                        &light.pl.color.ambient,
+                    );
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.color.diffuse", i),
+                        &light.pl.color.diffuse,
+                    );
+                    shader.set_uniform(
+                        &format!("uSpotLights[{}].pl.color.specular", i),
+                        &light.pl.color.specular,
+                    );
+                }
+
+                shader.set_uniform("uNumLightsMask", &scene.lights_mask);
             }
 
             if let Some(mesh) = &obj.mesh {

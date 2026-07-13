@@ -70,13 +70,14 @@ impl Texture {
 
     pub fn bind(&self, unit: u32) {
         unsafe {
-            self.gl.active_texture(glow::TEXTURE0 + unit);
+            self.gl.active_texture(glow::TEXTURE0 + unit.min(15));
             self.gl.bind_texture(glow::TEXTURE_2D, Some(self.texture));
         }
     }
 
-    pub fn unbind(&self) {
+    pub fn unbind(&self, unit: u32) {
         unsafe {
+            self.gl.active_texture(glow::TEXTURE0 + unit.min(15));
             self.gl.bind_texture(glow::TEXTURE_2D, None);
         }
     }

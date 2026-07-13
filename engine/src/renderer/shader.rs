@@ -1,4 +1,3 @@
-use crate::renderer::Texture;
 use crate::renderer::uniform::Uniform;
 use glow::HasContext;
 use std::cell::RefCell;
@@ -82,13 +81,6 @@ impl ShaderProgram {
     pub fn set_uniform<T: Uniform>(&self, name: &str, value: &T) {
         if let Some(location) = self.get_uniform_location(name) {
             value.upload(&self.gl, &location);
-        }
-    }
-
-    pub fn set_texture(&self, name: &str, texture: &Texture, unit: u32) {
-        if let Some(location) = self.get_uniform_location(name) {
-            texture.bind(unit);
-            (unit as i32).upload(self.gl.as_ref(), &location);
         }
     }
 

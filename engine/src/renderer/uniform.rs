@@ -1,6 +1,6 @@
 use glow::HasContext;
 
-pub trait Uniform {
+pub trait Uniform: Copy {
     fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation);
 }
 
@@ -16,6 +16,14 @@ impl Uniform for i32 {
     fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
         unsafe {
             gl.uniform_1_i32(Some(&location), *self);
+        }
+    }
+}
+
+impl Uniform for u32 {
+    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
+        unsafe {
+            gl.uniform_1_u32(Some(&location), *self);
         }
     }
 }

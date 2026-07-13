@@ -4,18 +4,16 @@
 		"fragment": "./assets/shaders/static_shader.frag"
 	},
 
+	"textures": [
+		"./assets/textures/crate.png",
+		"./assets/textures/crate_specular.png",
+		"./assets/textures/matrix.jpg"
+	],
+
 	"params": {
-		"float3": [
-			{
-				"name": "uColor",
-				"value": [1.0, 1.0, 1.0]
-			}
-		],
-		"textures": [
-			{
-				"name": "uDiffuseMap",
-				"path": "./assets/textures/crate.png"
-			}
-		]
+		"shininess": 32.0,
+		"diffuse_index": 0,
+		"specular_index": 1,
+		"emission_index": 2
 	}
 }
