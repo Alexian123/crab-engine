@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 glam = { workspace = true }
 asset-importer = { workspace = true }
+engine_asset = { path = "../engine_asset" }
