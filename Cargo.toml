@@ -2,7 +2,8 @@
 resolver = "2"
 
 members = [
-    "engine", "engine_asset", "importer",
+    "asset_converter",
+    "engine", "engine_asset",
     "sandbox"
 ]
 
