@@ -3,14 +3,14 @@ mod mesh_loader;
 mod shader_loader;
 mod texture_loader;
 
-use crate::loader::material_file_loader::*;
-use crate::loader::mesh_loader::*;
-use crate::loader::shader_loader::*;
-use crate::loader::texture_loader::*;
 use crate::renderer::Material;
+use material_file_loader::*;
+use mesh_loader::*;
+use shader_loader::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::rc::Rc;
+use texture_loader::*;
 
 pub struct Loader {
     meshes: MeshLoader,

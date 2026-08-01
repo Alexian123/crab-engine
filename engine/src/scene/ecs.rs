@@ -1,8 +1,8 @@
-mod component;
-mod entity;
+mod component_storage;
+mod entity_storage;
 
-use component::ComponentManager;
-use entity::EntityManager;
+use component_storage::ComponentManager;
+use entity_storage::EntityManager;
 use std::any::Any;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

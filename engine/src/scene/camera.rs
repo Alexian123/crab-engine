@@ -4,7 +4,7 @@ pub use fly_cam::FlyCamera;
 use glam::{Mat4, Vec3};
 
 pub trait Camera {
-    fn view(&mut self) -> Mat4;
-    fn projection(&mut self) -> Mat4;
-    fn position(&mut self) -> Vec3;
+    fn view(&self) -> Mat4;
+    fn projection(&self) -> Mat4;
+    fn position(&self) -> Vec3;
 }

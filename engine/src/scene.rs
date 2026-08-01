@@ -1,20 +1,29 @@
 pub mod camera;
+pub mod components;
 pub mod ecs;
 pub mod lights;
-pub mod object;
 
-pub use crate::scene::camera::Camera;
-pub use crate::scene::camera::FlyCamera;
-pub use crate::scene::ecs::Component;
-pub use crate::scene::ecs::Entity;
-pub use crate::scene::ecs::World;
-pub use crate::scene::lights::{DirectionalLight, LightColor, PointLight, SpotLight};
-pub use crate::scene::object::Object;
+pub use camera::{Camera, FlyCamera};
+pub use components::*;
+pub use ecs::{Component, Entity, World};
+pub use lights::{DirectionalLight, LightColor, PointLight, SpotLight};
 
 pub struct Scene {
-    pub objects: Vec<Object>,
-    pub directional_lights: Vec<DirectionalLight>,
-    pub point_lights: Vec<PointLight>,
-    pub spot_lights: Vec<SpotLight>,
-    pub lights_mask: u32,
+    world: World,
+}
+
+impl Scene {
+    pub fn new() -> Self {
+        Self {
+            world: World::default(),
+        }
+    }
+
+    pub fn world(&self) -> &World {
+        &self.world
+    }
+
+    pub fn world_mut(&mut self) -> &mut World {
+        &mut self.world
+    }
 }

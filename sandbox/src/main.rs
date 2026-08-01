@@ -42,16 +42,55 @@ impl Application for Sandbox {
             .load_material("./assets/materials/crate.mat")
             .unwrap();
 
-        let crate_object = Object::new(
-            Some(Rc::clone(&cube_mesh)),
-            Some(Rc::clone(&crate_material)),
-            Vec3::new(0.0, 0.0, -2.0),
-            Quat::IDENTITY,
-            Vec3::new(1.0, 1.0, 1.0),
-        );
-        self.scene.objects.push(crate_object);
+        let world = self.scene.world_mut();
 
-        self.scene.directional_lights.push(DirectionalLight {
+        let camera_entity = world.create_entity();
+        world.add_component(
+            camera_entity,
+            CameraComponent {
+                position: self.camera.position(),
+                view: self.camera.view(),
+                projection: self.camera.projection(),
+            },
+        );
+
+        let crate_entity = world.create_entity();
+        world.add_component(
+            crate_entity,
+            TransformComponent {
+                position: Vec3::new(0.0, 0.0, -2.0),
+                rotation: Quat::IDENTITY,
+                scale: Vec3::new(1.0, 1.0, 1.0),
+            },
+        );
+        world.add_component(
+            crate_entity,
+            MeshComponent {
+                mesh: Rc::clone(&cube_mesh),
+            },
+        );
+        world.add_component(
+            crate_entity,
+            MaterialComponent {
+                material: Rc::clone(&crate_material),
+            },
+        );
+
+        let lighting_entity = world.create_entity();
+        world.add_component(
+            lighting_entity,
+            LightingComponent {
+                lights_mask: 0,
+                directional_lights: Vec::new(),
+                point_lights: Vec::new(),
+                spot_lights: Vec::new(),
+            },
+        );
+        let lighting = world
+            .get_component_mut::<LightingComponent>(lighting_entity)
+            .unwrap();
+
+        lighting.directional_lights.push(DirectionalLight {
             color: LightColor {
                 ambient: Vec3::new(0.05, 0.05, 0.05),
                 diffuse: Vec3::new(0.4, 0.4, 0.4),
@@ -60,7 +99,7 @@ impl Application for Sandbox {
             direction: Vec3::new(-0.2, -1.0, -0.3),
         });
 
-        self.scene.point_lights.push(PointLight {
+        lighting.point_lights.push(PointLight {
             color: LightColor {
                 ambient: Vec3::new(0.05, 0.05, 0.05),
                 diffuse: Vec3::new(0.8, 0.8, 0.8),
@@ -71,7 +110,7 @@ impl Application for Sandbox {
             linear: 0.09,
             quadratic: 0.032,
         });
-        self.scene.point_lights.push(PointLight {
+        lighting.point_lights.push(PointLight {
             color: LightColor {
                 ambient: Vec3::new(0.05, 0.05, 0.05),
                 diffuse: Vec3::new(0.8, 0.8, 0.8),
@@ -83,7 +122,7 @@ impl Application for Sandbox {
             quadratic: 0.032,
         });
 
-        self.scene.spot_lights.push(SpotLight {
+        lighting.spot_lights.push(SpotLight {
             pl: PointLight {
                 color: LightColor {
                     ambient: Vec3::new(0.0, 0.0, 0.0),
@@ -100,15 +139,17 @@ impl Application for Sandbox {
             outer_cutoff: (15.0 as f32).to_radians().cos(),
         });
 
-        self.scene.lights_mask = (self.scene.directional_lights.len() as u32)
-            | (((self.scene.point_lights.len() as u32) & 0xFF) << 8)
-            | (((self.scene.spot_lights.len() as u32) & 0xFF) << 16)
+        lighting.lights_mask = (lighting.directional_lights.len() as u32)
+            | (((lighting.point_lights.len() as u32) & 0xFF) << 8)
+            | (((lighting.spot_lights.len() as u32) & 0xFF) << 16)
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
         if input.is_key_released(KeyCode::Escape) {
             return true;
         }
+
+        let world = self.scene.world_mut();
 
         let (_, scroll_offset_y) = input.mouse_wheel();
         if scroll_offset_y != 0.0 {
@@ -120,11 +161,6 @@ impl Application for Sandbox {
             let sensitivity = 0.1;
             self.camera.move_yaw(delta.0 as f32 * sensitivity);
             self.camera.move_pitch(-delta.1 as f32 * sensitivity);
-        }
-
-        self.scene.lights_mask &= 0xFFFF;
-        if input.is_mouse_down(MouseButton::Left) {
-            self.scene.lights_mask |= 1 << 16;
         }
 
         let camera_speed = dt * 2.5;
@@ -147,18 +183,28 @@ impl Application for Sandbox {
             self.camera.move_y(-camera_speed);
         }
 
+        // update camera component
+        let (_, camera_comp) = world.query_mut::<CameraComponent>().next().unwrap();
+        camera_comp.position = self.camera.position();
+        camera_comp.view = self.camera.view();
+        camera_comp.projection = self.camera.projection();
+
+        let (_, lighting) = world.query_mut::<LightingComponent>().next().unwrap();
+
+        lighting.lights_mask &= 0xFFFF;
+        if input.is_mouse_down(MouseButton::Left) {
+            lighting.lights_mask |= 1 << 16;
+        }
+
         // update spot light position and direction to simulate FPS flashlight
-        self.scene.spot_lights[0].pl.position = self.camera.position();
-        self.scene.spot_lights[0].direction = self.camera.front();
+        lighting.spot_lights[0].pl.position = self.camera.position();
+        lighting.spot_lights[0].direction = self.camera.front();
 
         false
     }
 
     fn render(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {
-        self.renderer
-            .as_ref()
-            .unwrap()
-            .render(&self.scene, &mut self.camera);
+        self.renderer.as_ref().unwrap().render(&self.scene);
     }
 
     fn on_resize(&mut self, width: u32, height: u32, gl: &Rc<glow::Context>) {
@@ -175,13 +221,7 @@ fn main() {
     let app = Sandbox {
         renderer: None,
         loader: None,
-        scene: Scene {
-            objects: Vec::new(),
-            directional_lights: Vec::new(),
-            point_lights: Vec::new(),
-            spot_lights: Vec::new(),
-            lights_mask: 0,
-        },
+        scene: Scene::new(),
         camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 100.0),
     };
     run("Sandbox", app);
