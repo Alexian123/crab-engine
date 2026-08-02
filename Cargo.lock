@@ -166,8 +166,11 @@ name = "asset_converter"
 version = "0.1.0"
 dependencies = [
  "asset-importer",
+ "bincode",
  "engine_asset",
- "glam 0.29.3",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -572,8 +575,6 @@ dependencies = [
 name = "engine_asset"
 version = "0.1.0"
 dependencies = [
- "bincode",
- "glam 0.29.3",
  "serde",
 ]
 
