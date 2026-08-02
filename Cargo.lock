@@ -555,6 +555,7 @@ name = "engine"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "bytemuck",
  "engine_asset",
  "glam 0.29.3",

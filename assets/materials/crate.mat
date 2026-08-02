@@ -1,4 +1,5 @@
 {
+    "name": "crate",
 	"shader": {
 		"vertex": "./assets/shaders/static_shader.vert",
 		"fragment": "./assets/shaders/static_shader.frag"

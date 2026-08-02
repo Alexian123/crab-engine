@@ -18,4 +18,5 @@ thiserror = { workspace = true }
 image = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+bincode = { workspace = true }
 engine_asset = { path = "../engine_asset" }

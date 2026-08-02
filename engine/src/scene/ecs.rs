@@ -39,6 +39,11 @@ impl World {
         self.component_manager.has_component::<T>(entity)
     }
 
+    pub fn set_component<T: Component>(&mut self, entity: Entity, component: T) {
+        assert!(self.entity_manager.is_alive(entity));
+        self.component_manager.set_component::<T>(entity, component);
+    }
+
     pub fn add_component<T: Component>(&mut self, entity: Entity, component: T) {
         assert!(self.entity_manager.is_alive(entity));
         self.component_manager.add_component::<T>(entity, component);
@@ -64,15 +69,15 @@ impl World {
         self.component_manager.remove_all_components(entity);
     }
 
-    pub fn query<T: Component>(&self) -> impl Iterator<Item = (&Entity, &T)> {
+    pub fn query<T: Component>(&self) -> impl Iterator<Item = (Entity, &T)> {
         self.component_manager.iter::<T>()
     }
 
-    pub fn query_mut<T: Component>(&mut self) -> impl Iterator<Item = (&Entity, &mut T)> {
+    pub fn query_mut<T: Component>(&mut self) -> impl Iterator<Item = (Entity, &mut T)> {
         self.component_manager.iter_mut::<T>()
     }
 
-    pub fn query2<T: Component, U: Component>(&self) -> impl Iterator<Item = (&Entity, &T, &U)> {
+    pub fn query2<T: Component, U: Component>(&self) -> impl Iterator<Item = (Entity, &T, &U)> {
         self.component_manager.iter2::<T, U>()
     }
 }
@@ -238,7 +243,7 @@ mod tests {
 
         let (entity, transform, velocity) = result[0];
 
-        assert_eq!(*entity, e2);
+        assert_eq!(entity, e2);
         assert_eq!(transform.x, 2.0);
         assert_eq!(velocity.x, 20.0);
     }

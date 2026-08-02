@@ -33,14 +33,16 @@ impl Renderer {
         let lighting = world.query::<LightingComponent>().next().map(|(_, c)| c);
         let camera = world.query::<CameraComponent>().next().map(|(_, c)| c);
 
-        for (entity, transform, mesh_comp) in world.query2::<TransformComponent, MeshComponent>() {
-            if let Some(material_component) = world.get_component::<MaterialComponent>(*entity) {
+        for (entity, world_transform, mesh_comp) in
+            world.query2::<WorldTransformComponent, MeshComponent>()
+        {
+            if let Some(material_component) = world.get_component::<MaterialComponent>(entity) {
                 material_component.material.bind();
 
                 let shader = material_component.material.shader();
 
-                shader.set_uniform("uModel", &transform.model_matrix());
-                shader.set_uniform("uNormal", &transform.normal_matrix());
+                shader.set_uniform("uModel", &world_transform.model_matrix);
+                shader.set_uniform("uNormal", &world_transform.normal_matrix());
 
                 if let Some(camera_comp) = camera {
                     shader.set_uniform("uView", &camera_comp.view);
@@ -135,11 +137,11 @@ impl Renderer {
 
                     shader.set_uniform("uNumLightsMask", &lighting.lights_mask);
                 }
-            }
 
-            mesh_comp.mesh.bind();
-            mesh_comp.mesh.draw();
-            mesh_comp.mesh.unbind();
+                mesh_comp.mesh.bind();
+                mesh_comp.mesh.draw();
+                mesh_comp.mesh.unbind();
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct MeshAsset {
     pub name: String,
+    pub vertex_count: usize,
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
     pub texcoords: Vec<[f32; 2]>,

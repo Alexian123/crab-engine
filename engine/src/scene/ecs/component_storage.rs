@@ -33,6 +33,10 @@ impl<T: Component> ComponentStore<T> {
         }
     }
 
+    pub fn set(&mut self, entity: Entity, component: T) {
+        self.components.insert(entity, component);
+    }
+
     pub fn get(&self, entity: &Entity) -> Option<&T> {
         self.components.get(entity)
     }
@@ -41,12 +45,12 @@ impl<T: Component> ComponentStore<T> {
         self.components.get_mut(entity)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&Entity, &T)> {
-        self.components.iter()
+    pub fn iter(&self) -> impl Iterator<Item = (Entity, &T)> {
+        self.components.iter().map(|(k, v)| (*k, v))
     }
 
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&Entity, &mut T)> {
-        self.components.iter_mut()
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Entity, &mut T)> {
+        self.components.iter_mut().map(|(k, v)| (*k, v))
     }
 }
 
@@ -74,26 +78,26 @@ pub struct ComponentManager {
 }
 
 impl ComponentManager {
-    pub fn iter<T: Component>(&self) -> impl Iterator<Item = (&Entity, &T)> {
+    pub fn iter<T: Component>(&self) -> impl Iterator<Item = (Entity, &T)> {
         self.component_store::<T>()
             .into_iter()
             .flat_map(|store| store.iter())
     }
 
-    pub fn iter_mut<T: Component>(&mut self) -> impl Iterator<Item = (&Entity, &mut T)> {
+    pub fn iter_mut<T: Component>(&mut self) -> impl Iterator<Item = (Entity, &mut T)> {
         self.component_store_mut::<T>()
             .into_iter()
             .flat_map(|store| store.iter_mut())
     }
 
-    pub fn iter2<T: Component, U: Component>(&self) -> impl Iterator<Item = (&Entity, &T, &U)> {
+    pub fn iter2<T: Component, U: Component>(&self) -> impl Iterator<Item = (Entity, &T, &U)> {
         let t_store = self.component_store::<T>();
         let u_store = self.component_store::<U>();
 
         t_store.into_iter().flat_map(move |ts| {
             ts.iter().filter_map(move |(entity, t)| {
                 u_store
-                    .and_then(|us| us.get(entity))
+                    .and_then(|us| us.get(&entity))
                     .map(|u| (entity, t, u))
             })
         })
@@ -106,6 +110,11 @@ impl ComponentManager {
     pub fn add_component<T: Component>(&mut self, entity: Entity, component: T) {
         self.component_store_mut_or_create::<T>()
             .add(entity, component);
+    }
+
+    pub fn set_component<T: Component>(&mut self, entity: Entity, component: T) {
+        self.component_store_mut_or_create::<T>()
+            .set(entity, component);
     }
 
     pub fn get_component<T: Component>(&self, entity: Entity) -> Option<&T> {

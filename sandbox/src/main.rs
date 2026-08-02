@@ -57,8 +57,8 @@ impl Application for Sandbox {
         let crate_entity = world.create_entity();
         world.add_component(
             crate_entity,
-            TransformComponent {
-                position: Vec3::new(0.0, 0.0, -2.0),
+            LocalTransformComponent {
+                position: Vec3::new(-2.0, 0.0, -4.0),
                 rotation: Quat::IDENTITY,
                 scale: Vec3::new(1.0, 1.0, 1.0),
             },
@@ -141,7 +141,18 @@ impl Application for Sandbox {
 
         lighting.lights_mask = (lighting.directional_lights.len() as u32)
             | (((lighting.point_lights.len() as u32) & 0xFF) << 8)
-            | (((lighting.spot_lights.len() as u32) & 0xFF) << 16)
+            | (((lighting.spot_lights.len() as u32) & 0xFF) << 16);
+
+        let backpack = loader
+            .load_model("./test/survival_guitar_backpack.glb.model", &mut self.scene)
+            .expect("Failed to load model");
+        let backpack_transform = self
+            .scene
+            .world_mut()
+            .get_component_mut::<LocalTransformComponent>(backpack)
+            .unwrap();
+        backpack_transform.position = Vec3::new(-2.0, 5.0, -4.0);
+        backpack_transform.scale = Vec3::new(0.01, 0.01, 0.01);
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
@@ -199,6 +210,8 @@ impl Application for Sandbox {
         // update spot light position and direction to simulate FPS flashlight
         lighting.spot_lights[0].pl.position = self.camera.position();
         lighting.spot_lights[0].direction = self.camera.front();
+
+        self.scene.update();
 
         false
     }

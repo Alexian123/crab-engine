@@ -1,20 +1,22 @@
-use thiserror::Error;
-
 pub use crate::renderer::Mesh;
 use crate::renderer::vertex::*;
+use bincode::{config, serde};
+use engine_asset::MeshAsset;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
+use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum MeshLoadError {
-    //#[error("mesh file not found: {0}")]
-    //MeshFileNotFound(String),
     #[error("invalid mesh: {0}")]
     InvalidMesh(String),
 
     #[error("failed to load mesh: {0}")]
     Io(#[from] std::io::Error),
+
+    #[error("failed to decode mesh: {0}")]
+    DecodeError(#[from] bincode::error::DecodeError),
 }
 
 pub struct MeshLoader {
@@ -37,7 +39,59 @@ impl MeshLoader {
             return Ok(Rc::clone(mesh));
         }
 
-        unimplemented!("Load mesh with a library");
+        let bytes = std::fs::read(path.clone())?;
+
+        let (mesh_data, _) =
+            serde::borrow_decode_from_slice::<MeshAsset, _>(bytes.as_slice(), config::standard())?;
+
+        let mut vertices = Vec::new();
+
+        for i in 0..mesh_data.vertex_count {
+            vertices.push(mesh_data.positions[i][0]);
+            vertices.push(mesh_data.positions[i][1]);
+            vertices.push(mesh_data.positions[i][2]);
+
+            vertices.push(mesh_data.texcoords[i][0]);
+            vertices.push(mesh_data.texcoords[i][1]);
+
+            vertices.push(mesh_data.normals[i][0]);
+            vertices.push(mesh_data.normals[i][1]);
+            vertices.push(mesh_data.normals[i][2]);
+        }
+
+        let layout = VertexLayout {
+            attribs: vec![
+                VertexAttribute {
+                    location: 0,
+                    count: 3,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 0,
+                },
+                VertexAttribute {
+                    location: 2,
+                    count: 2,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 3 * std::mem::size_of::<f32>(),
+                },
+                VertexAttribute {
+                    location: 3,
+                    count: 3,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 5 * std::mem::size_of::<f32>(),
+                },
+            ],
+        };
+
+        let mesh = Rc::new(
+            Mesh::new(Rc::clone(&self.gl), &vertices, &mesh_data.indices, &layout)
+                .map_err(MeshLoadError::InvalidMesh)?,
+        );
+
+        self.cache.insert(path, Rc::clone(&mesh));
+        Ok(mesh)
     }
 
     pub fn load_cube(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {

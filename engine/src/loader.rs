@@ -1,11 +1,17 @@
 mod material_file_loader;
 mod mesh_loader;
+mod model_file_loader;
 mod shader_loader;
 mod texture_loader;
 
 use crate::renderer::Material;
+use crate::scene::components::*;
+use crate::scene::{Entity, Scene};
+use engine_asset::*;
+use glam::{Quat, Vec3};
 use material_file_loader::*;
 use mesh_loader::*;
+use model_file_loader::*;
 use shader_loader::*;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -17,9 +23,11 @@ pub struct Loader {
     shaders: ShaderLoader,
     textures: TextureLoader,
     material_files: MaterialFileLoader,
+    model_files: ModelFileLoader,
     material_cache: HashMap<PathBuf, Rc<Material>>,
 }
 
+// TODO: DO NOT FAIL SILENTLY EVER
 impl Loader {
     pub fn new(gl: Rc<glow::Context>) -> Self {
         Self {
@@ -27,7 +35,119 @@ impl Loader {
             shaders: ShaderLoader::new(Rc::clone(&gl)),
             textures: TextureLoader::new(Rc::clone(&gl)),
             material_files: MaterialFileLoader::new(),
+            model_files: ModelFileLoader::new(),
             material_cache: HashMap::new(),
+        }
+    }
+
+    pub fn load_model(&mut self, path: &str, scene: &mut Scene) -> Option<Entity> {
+        let path = std::fs::canonicalize(path).ok()?;
+
+        match self.model_files.load(path.clone()) {
+            Ok(model_file) => {
+                let world = scene.world_mut();
+                let root_parent = world.create_entity();
+                world.add_component(root_parent, NameComponent(model_file.name.clone()));
+                world.add_component(
+                    root_parent,
+                    LocalTransformComponent {
+                        position: Vec3::ZERO,
+                        rotation: Quat::IDENTITY,
+                        scale: Vec3::ONE,
+                    },
+                );
+                self.load_node(&model_file.root, Some(root_parent), scene);
+                Some(root_parent)
+            }
+            Err(err) => {
+                tracing::error!("Failed to load model: {}", err);
+                None
+            }
+        }
+    }
+
+    fn load_node(&mut self, node: &NodeAsset, parent: Option<Entity>, scene: &mut Scene) {
+        let entity = scene.world_mut().create_entity();
+
+        scene
+            .world_mut()
+            .add_component(entity, NameComponent(node.name.clone()));
+        scene.world_mut().add_component(
+            entity,
+            LocalTransformComponent {
+                position: Vec3::from_array(node.translation),
+                rotation: Quat::from_array(node.rotation),
+                scale: Vec3::from_array(node.scale),
+            },
+        );
+
+        // if node has multiple mesh instances, create a child entity for each, otherwise add the mesh instance to the current entity
+        if node.mesh_instances.len() == 1 {
+            let mesh_instance = &node.mesh_instances[0];
+            if let Some(mesh) = self.load_mesh(&format!(
+                "./test/{}.mesh",
+                mesh_instance.mesh.to_string_lossy()
+            )) {
+                scene
+                    .world_mut()
+                    .add_component(entity, MeshComponent { mesh });
+            }
+
+            if let Some(material) = self.load_material(&format!(
+                "./test/{}.mat",
+                mesh_instance.material.to_string_lossy()
+            )) {
+                scene
+                    .world_mut()
+                    .add_component(entity, MaterialComponent { material });
+            }
+        } else {
+            for (index, mesh_instance) in node.mesh_instances.iter().enumerate() {
+                let child_entity = scene.world_mut().create_entity();
+                scene.world_mut().add_component(
+                    child_entity,
+                    NameComponent(format!("{}_mesh_instance_{}", node.name, index)),
+                );
+                scene.world_mut().add_component(
+                    child_entity,
+                    LocalTransformComponent {
+                        position: Vec3::ZERO,
+                        rotation: Quat::IDENTITY,
+                        scale: Vec3::ONE,
+                    },
+                );
+
+                if let Some(mesh) = self.load_mesh(&format!(
+                    "./test/{}.mesh",
+                    mesh_instance.mesh.to_string_lossy()
+                )) {
+                    scene
+                        .world_mut()
+                        .add_component(child_entity, MeshComponent { mesh });
+                }
+
+                if let Some(material) = self.load_material(&format!(
+                    "./test/{}.material",
+                    mesh_instance.material.to_string_lossy()
+                )) {
+                    scene
+                        .world_mut()
+                        .add_component(child_entity, MaterialComponent { material });
+                }
+
+                // set parent of child entity to current entity
+                scene.set_parent(child_entity, entity);
+            }
+        }
+
+        // set parent of current entity to parent entity
+        if let Some(parent) = parent {
+            scene.set_parent(entity, parent);
+        }
+
+        // recursively load children
+        for child in &node.children {
+            self.load_node(child, Some(entity), scene);
         }
     }
 

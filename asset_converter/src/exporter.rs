@@ -93,11 +93,7 @@ impl Exporter {
                     "texture not found",
                 )))?;
 
-        let path = path.join(format!(
-            "{}.{}",
-            texture_desc.name,
-            as_texture.format_hint_str()
-        ));
+        let path = path.join(format!("./{}", texture_desc.name,));
         as_texture
             .save_to_file(Path::new(&path))
             .expect("Failed to process texture");

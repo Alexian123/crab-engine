@@ -3,24 +3,40 @@ use crate::scene::*;
 use glam::{Mat3, Mat4, Quat, Vec3};
 use std::rc::Rc;
 
-pub struct TransformComponent {
+pub struct NameComponent(pub String);
+impl Component for NameComponent {}
+
+pub struct LocalTransformComponent {
     pub position: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
 }
 
-impl TransformComponent {
+impl LocalTransformComponent {
     pub fn model_matrix(&self) -> Mat4 {
         Mat4::from_scale_rotation_translation(self.scale, self.rotation, self.position)
     }
+}
 
+impl Component for LocalTransformComponent {}
+
+pub struct WorldTransformComponent {
+    pub model_matrix: Mat4,
+}
+
+impl WorldTransformComponent {
     pub fn normal_matrix(&self) -> Mat4 {
-        let model = self.model_matrix();
-        Mat4::from_mat3(Mat3::from_mat4(model.inverse().transpose()))
+        Mat4::from_mat3(Mat3::from_mat4(self.model_matrix.inverse().transpose()))
     }
 }
 
-impl Component for TransformComponent {}
+impl Component for WorldTransformComponent {}
+
+pub struct ParentComponent(pub Entity);
+impl Component for ParentComponent {}
+
+pub struct ChildrenComponent(pub Vec<Entity>);
+impl Component for ChildrenComponent {}
 
 pub struct MeshComponent {
     pub mesh: Rc<Mesh>,

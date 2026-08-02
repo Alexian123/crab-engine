@@ -58,12 +58,14 @@ impl Importer {
             model.meshes.push(self.process_mesh(&as_mesh));
         }
 
-        for as_material in as_scene.materials() {
-            model.materials.push(self.process_material(&as_material));
-        }
-
         for as_texture in as_scene.textures() {
             model.textures.push(self.process_texture(&as_texture));
+        }
+
+        for as_material in as_scene.materials() {
+            model
+                .materials
+                .push(self.process_material(&as_material, &model));
         }
 
         let root = self.process_node(&as_scene.root_node().unwrap(), &as_scene, &model);
@@ -117,8 +119,9 @@ impl Importer {
         }
 
         let vertices = as_mesh.vertices();
+        mesh.vertex_count = as_mesh.num_vertices();
 
-        for i in 0..as_mesh.num_vertices() {
+        for i in 0..mesh.vertex_count {
             mesh.positions
                 .push([vertices[i].x, vertices[i].y, vertices[i].z]);
 
@@ -163,7 +166,7 @@ impl Importer {
         mesh
     }
 
-    fn process_material(&self, as_material: &Material) -> MaterialAsset {
+    fn process_material(&self, as_material: &Material, model: &ModelDescription) -> MaterialAsset {
         let mut material = MaterialAsset {
             name: String::from(as_material.name()),
             shader: ShaderDesc {
@@ -184,23 +187,65 @@ impl Importer {
                 .set(self.unnamed_material_index.get() + 1);
         }
 
-        if as_material.texture_count(TextureType::Diffuse) > 0 {
-            let diffuse_texture = as_material.texture(TextureType::Diffuse, 0).unwrap();
-            material.textures.push(String::from(diffuse_texture.path));
-            material.params.diffuse_index = Some(0);
+        let types = vec![
+            TextureType::Diffuse,
+            TextureType::Specular,
+            TextureType::Emissive,
+        ];
+
+        for t in types {
+            if as_material.texture_count(t) > 0 {
+                let texture = as_material.texture(t, 0).unwrap();
+
+                match t {
+                    TextureType::Diffuse => {
+                        material.params.diffuse_index = Some(material.textures.len() as u32);
+                    }
+
+                    TextureType::Specular => {
+                        material.params.specular_index = Some(material.textures.len() as u32);
+                    }
+
+                    TextureType::Emissive => {
+                        material.params.emission_index = Some(material.textures.len() as u32);
+                    }
+
+                    _ => {}
+                }
+
+                if texture.path.starts_with("*") {
+                    let (_, index) = texture.path.split_at(1);
+                    let index = index.parse::<usize>().unwrap();
+                    material.textures.push(model.textures[index].name.clone());
+                } else {
+                    material.textures.push(String::from(texture.path));
+                }
+            }
         }
 
-        if as_material.texture_count(TextureType::Specular) > 0 {
-            let specular_texture = as_material.texture(TextureType::Specular, 0).unwrap();
-            material.params.specular_index = Some(material.textures.len() as u32);
-            material.textures.push(String::from(specular_texture.path));
-        }
+        // if as_material.texture_count(TextureType::Diffuse) > 0 {
+        //     let diffuse_texture = as_material.texture(TextureType::Diffuse, 0).unwrap();
+        //     if diffuse_texture.path.starts_with("*") {
+        //         let (_, index) = diffuse_texture.path.split_at(0);
+        //         let index = index.parse::<usize>().unwrap();
+        //         material.textures.push(model.textures[index].name.clone());
+        //     } else {
+        //         material.textures.push(String::from(diffuse_texture.path));
+        //     }
+        //     material.params.diffuse_index = Some(0);
+        // }
 
-        if as_material.texture_count(TextureType::Emissive) > 0 {
-            let emission_texture = as_material.texture(TextureType::Emissive, 0).unwrap();
-            material.params.emission_index = Some(material.textures.len() as u32);
-            material.textures.push(String::from(emission_texture.path));
-        }
+        // if as_material.texture_count(TextureType::Specular) > 0 {
+        //     let specular_texture = as_material.texture(TextureType::Specular, 0).unwrap();
+        //     material.params.specular_index = Some(material.textures.len() as u32);
+        //     material.textures.push(String::from(specular_texture.path));
+        // }
+
+        // if as_material.texture_count(TextureType::Emissive) > 0 {
+        //     let emission_texture = as_material.texture(TextureType::Emissive, 0).unwrap();
+        //     material.params.emission_index = Some(material.textures.len() as u32);
+        //     material.textures.push(String::from(emission_texture.path));
+        // }
 
         material
     }
@@ -213,7 +258,11 @@ impl Importer {
         {
             texture.name = String::from(filename);
         } else {
-            texture.name = format!("texture_{}", self.unnamed_texture_index.get());
+            texture.name = format!(
+                "texture_{}.{}",
+                self.unnamed_texture_index.get(),
+                as_texture.format_hint_str()
+            );
             self.unnamed_texture_index
                 .set(self.unnamed_texture_index.get() + 1);
         }
