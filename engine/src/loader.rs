@@ -14,6 +14,7 @@ use mesh_loader::*;
 use model_file_loader::*;
 use shader_loader::*;
 use std::collections::HashMap;
+use std::path::Path;
 use std::path::PathBuf;
 use std::rc::Rc;
 use texture_loader::*;
@@ -40,8 +41,12 @@ impl Loader {
         }
     }
 
-    pub fn load_model(&mut self, path: &str, scene: &mut Scene) -> Option<Entity> {
+    pub fn load_model(&mut self, path: &Path, scene: &mut Scene) -> Option<Entity> {
         let path = std::fs::canonicalize(path).ok()?;
+
+        if path.is_dir() || !path.parent()?.is_dir() {
+            return None;
+        }
 
         match self.model_files.load(path.clone()) {
             Ok(model_file) => {
@@ -56,7 +61,12 @@ impl Loader {
                         scale: Vec3::ONE,
                     },
                 );
-                self.load_node(&model_file.root, Some(root_parent), scene);
+                self.load_node(
+                    &path.parent().unwrap(),
+                    &model_file.root,
+                    Some(root_parent),
+                    scene,
+                );
                 Some(root_parent)
             }
             Err(err) => {
@@ -66,7 +76,13 @@ impl Loader {
         }
     }
 
-    fn load_node(&mut self, node: &NodeAsset, parent: Option<Entity>, scene: &mut Scene) {
+    fn load_node(
+        &mut self,
+        dir: &Path,
+        node: &NodeAsset,
+        parent: Option<Entity>,
+        scene: &mut Scene,
+    ) {
         let entity = scene.world_mut().create_entity();
 
         scene
@@ -84,19 +100,22 @@ impl Loader {
         // if node has multiple mesh instances, create a child entity for each, otherwise add the mesh instance to the current entity
         if node.mesh_instances.len() == 1 {
             let mesh_instance = &node.mesh_instances[0];
-            if let Some(mesh) = self.load_mesh(&format!(
-                "./test/{}.mesh",
-                mesh_instance.mesh.to_string_lossy()
-            )) {
+            if let Some(mesh) = self.load_mesh(
+                &dir.join(&mesh_instance.mesh)
+                    .with_added_extension("mesh")
+                    .as_path(),
+            ) {
                 scene
                     .world_mut()
                     .add_component(entity, MeshComponent { mesh });
             }
 
-            if let Some(material) = self.load_material(&format!(
-                "./test/{}.mat",
-                mesh_instance.material.to_string_lossy()
-            )) {
+            if let Some(material) = self.load_material(
+                dir.join(&mesh_instance.material)
+                    .with_added_extension("mat")
+                    .as_path(),
+                Some(dir),
+            ) {
                 scene
                     .world_mut()
                     .add_component(entity, MaterialComponent { material });
@@ -117,19 +136,22 @@ impl Loader {
                     },
                 );
 
-                if let Some(mesh) = self.load_mesh(&format!(
-                    "./test/{}.mesh",
-                    mesh_instance.mesh.to_string_lossy()
-                )) {
+                if let Some(mesh) = self.load_mesh(
+                    dir.join(&mesh_instance.mesh)
+                        .with_added_extension("mesh")
+                        .as_path(),
+                ) {
                     scene
                         .world_mut()
                         .add_component(child_entity, MeshComponent { mesh });
                 }
 
-                if let Some(material) = self.load_material(&format!(
-                    "./test/{}.material",
-                    mesh_instance.material.to_string_lossy()
-                )) {
+                if let Some(material) = self.load_material(
+                    dir.join(&mesh_instance.material)
+                        .with_added_extension("mat")
+                        .as_path(),
+                    Some(dir),
+                ) {
                     scene
                         .world_mut()
                         .add_component(child_entity, MaterialComponent { material });
@@ -147,11 +169,15 @@ impl Loader {
 
         // recursively load children
         for child in &node.children {
-            self.load_node(child, Some(entity), scene);
+            self.load_node(dir, child, Some(entity), scene);
         }
     }
 
-    pub fn load_material(&mut self, path: &str) -> Option<Rc<Material>> {
+    pub fn load_material(
+        &mut self,
+        path: &Path,
+        texture_dir: Option<&Path>, // None if material has absolute texture paths
+    ) -> Option<Rc<Material>> {
         let path = std::fs::canonicalize(path).ok()?;
 
         if let Some(cached_material) = self.material_cache.get(&path) {
@@ -160,16 +186,25 @@ impl Loader {
 
         match self.material_files.load(path.clone()) {
             Ok(material_file) => {
-                let shader =
-                    self.load_shader(&material_file.shader.vertex, &material_file.shader.fragment)?;
+                let shader = self.load_shader(
+                    Path::new(&material_file.shader.vertex),
+                    Path::new(&material_file.shader.fragment),
+                )?;
 
                 let mut material = Material::new(shader);
 
                 for texture_path in &material_file.textures {
-                    if let Some(texture) = self.load_texture(texture_path) {
+                    let mut texture_path = PathBuf::from(texture_path);
+                    if let Some(texture_dir) = texture_dir {
+                        texture_path = texture_dir.join(texture_path);
+                    }
+                    if let Some(texture) = self.load_texture(texture_path.as_path()) {
                         material.textures.push(texture);
                     } else {
-                        tracing::error!("Failed to load texture: {}", texture_path);
+                        tracing::error!(
+                            "Failed to load texture: {}",
+                            texture_path.as_os_str().to_string_lossy()
+                        );
                     }
                 }
 
@@ -191,7 +226,7 @@ impl Loader {
         }
     }
 
-    pub fn load_mesh(&mut self, path: &str) -> Option<Rc<Mesh>> {
+    pub fn load_mesh(&mut self, path: &Path) -> Option<Rc<Mesh>> {
         match self.meshes.load(path) {
             Ok(mesh) => Some(mesh),
             Err(err) => {
@@ -211,7 +246,7 @@ impl Loader {
         }
     }
 
-    pub fn load_shader(&mut self, vertex: &str, fragment: &str) -> Option<Rc<ShaderProgram>> {
+    pub fn load_shader(&mut self, vertex: &Path, fragment: &Path) -> Option<Rc<ShaderProgram>> {
         match self.shaders.load(vertex, fragment) {
             Ok(shader) => Some(shader),
             Err(err) => {
@@ -221,7 +256,7 @@ impl Loader {
         }
     }
 
-    pub fn load_texture(&mut self, path: &str) -> Option<Rc<Texture>> {
+    pub fn load_texture(&mut self, path: &Path) -> Option<Rc<Texture>> {
         match self.textures.load(path) {
             Ok(texture) => Some(texture),
             Err(err) => {

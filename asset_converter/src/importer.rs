@@ -71,6 +71,7 @@ impl Importer {
         let root = self.process_node(&as_scene.root_node().unwrap(), &as_scene, &model);
         model.root = root;
 
+        println!("Finished importing model: {}", model.name);
         Ok(model)
     }
 
@@ -163,6 +164,7 @@ impl Importer {
             }
         }
 
+        println!("Imported mesh: {}", as_mesh.name());
         mesh
     }
 
@@ -247,6 +249,8 @@ impl Importer {
         //     material.textures.push(String::from(emission_texture.path));
         // }
 
+        println!("Imported material: {}", material.name);
+
         material
     }
 
@@ -268,6 +272,8 @@ impl Importer {
         }
 
         texture.texture = Some(as_texture.clone());
+
+        println!("Imported texture: {}", texture.name);
 
         texture
     }

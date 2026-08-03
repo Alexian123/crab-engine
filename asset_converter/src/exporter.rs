@@ -34,6 +34,9 @@ impl Exporter {
         model: ModelDescription,
         path: P,
     ) -> Result<ModelAsset, ExportError> {
+        if !path.as_ref().is_dir() {
+            std::fs::create_dir_all(&path)?;
+        }
         let path = std::fs::canonicalize(path.as_ref())?;
 
         self.unnamed_texture_index.set(0);
@@ -61,6 +64,7 @@ impl Exporter {
         let path = path.join(format!("{}.model", model.name));
         let json = serde_json::to_string_pretty(&model)?;
         fs::write(&path, json)?;
+        println!("Exported model to {}", path.as_os_str().to_string_lossy());
 
         Ok(model)
     }
@@ -68,14 +72,19 @@ impl Exporter {
     fn export_mesh(&self, mesh: &MeshAsset, path: &Path) -> Result<(), ExportError> {
         let path = path.join(format!("{}.mesh", mesh.name));
         let bytes = serde::encode_to_vec(mesh, config::standard())?;
-        fs::write(path, bytes)?;
+        fs::write(path.clone(), bytes)?;
+        println!("Exported mesh to {}", path.as_os_str().to_string_lossy());
         Ok(())
     }
 
     fn export_material(&self, material: &MaterialAsset, path: &Path) -> Result<(), ExportError> {
         let path = path.join(format!("{}.mat", material.name));
         let json = serde_json::to_string_pretty(material)?;
-        fs::write(path, json)?;
+        fs::write(path.clone(), json)?;
+        println!(
+            "Exported material to {}",
+            path.as_os_str().to_string_lossy()
+        );
         Ok(())
     }
 
@@ -97,6 +106,7 @@ impl Exporter {
         as_texture
             .save_to_file(Path::new(&path))
             .expect("Failed to process texture");
+        println!("Exported texture to {}", path.as_os_str().to_string_lossy());
         Ok(())
     }
 }

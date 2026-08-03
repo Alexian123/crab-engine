@@ -4,6 +4,7 @@ use engine::renderer::Renderer;
 use engine::scene::*;
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
+use std::path::Path;
 use std::rc::Rc;
 use winit::dpi::PhysicalSize;
 use winit::event::MouseButton;
@@ -39,7 +40,7 @@ impl Application for Sandbox {
         let cube_mesh = loader.load_cube_mesh().unwrap();
 
         let crate_material = loader
-            .load_material("./assets/materials/crate.mat")
+            .load_material(Path::new("./assets/materials/crate.mat"), None)
             .unwrap();
 
         let world = self.scene.world_mut();
@@ -144,8 +145,13 @@ impl Application for Sandbox {
             | (((lighting.spot_lights.len() as u32) & 0xFF) << 16);
 
         let backpack = loader
-            .load_model("./test/survival_guitar_backpack.glb.model", &mut self.scene)
-            .expect("Failed to load model");
+            .load_model(
+                Path::new(
+                    "./assets/models/survival_guitar_backpack/survival_guitar_backpack.glb.model",
+                ),
+                &mut self.scene,
+            )
+            .expect("Failed to load backpack model");
         let backpack_transform = self
             .scene
             .world_mut()
