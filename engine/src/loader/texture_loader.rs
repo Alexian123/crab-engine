@@ -1,3 +1,4 @@
+use crate::GfxContext;
 pub use crate::renderer::Texture;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -17,14 +18,14 @@ pub enum TextureLoadError {
 }
 
 pub struct TextureLoader {
-    gl: Rc<glow::Context>,
+    gfx: Rc<GfxContext>,
     cache: HashMap<PathBuf, Rc<Texture>>,
 }
 
 impl TextureLoader {
-    pub fn new(gl: Rc<glow::Context>) -> Self {
+    pub fn new(gfx: Rc<GfxContext>) -> Self {
         Self {
-            gl,
+            gfx,
             cache: HashMap::new(),
         }
     }
@@ -45,7 +46,7 @@ impl TextureLoader {
         let data = image.into_raw();
 
         let texture = Rc::new(
-            Texture::new(Rc::clone(&self.gl), width, height, 4, &data)
+            Texture::new(Rc::clone(&self.gfx), width, height, 4, &data)
                 .map_err(TextureLoadError::TextureCreate)?,
         );
 

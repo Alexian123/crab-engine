@@ -7,15 +7,6 @@ pub enum VertexFormat {
 }
 
 impl VertexFormat {
-    pub fn gl_type(self) -> u32 {
-        match self {
-            VertexFormat::Float32 => glow::FLOAT,
-            VertexFormat::Uint32 => glow::UNSIGNED_INT,
-            VertexFormat::Int32 => glow::INT,
-            VertexFormat::Uint8 => glow::UNSIGNED_BYTE,
-        }
-    }
-
     pub fn size(self) -> usize {
         match self {
             VertexFormat::Float32 => 4,

@@ -1,4 +1,4 @@
-use engine::glow::{self, HasContext};
+use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
 use engine::scene::*;
@@ -19,7 +19,7 @@ struct Sandbox {
 }
 
 impl Application for Sandbox {
-    fn init(&mut self, window: &Window, gl: &Rc<glow::Context>) {
+    fn init(&mut self, window: &Window, gfx: &Rc<GfxContext>) {
         tracing::info!("sandbox initialized");
 
         let _ = window.request_inner_size(PhysicalSize::new(1280, 720));
@@ -28,12 +28,11 @@ impl Application for Sandbox {
             .expect("Failed to grab cursor");
         window.set_cursor_visible(false);
 
-        unsafe {
-            gl.clear_color(0.1, 0.1, 0.15, 1.0);
-            gl.enable(glow::DEPTH_TEST);
-        }
-        self.renderer = Some(Renderer::new(Rc::clone(gl)));
-        self.loader = Some(Loader::new(Rc::clone(gl)));
+        gfx.set_clear_color(0.1, 0.1, 0.15, 1.0);
+        gfx.set_depth_test(true);
+
+        self.renderer = Some(Renderer::new(Rc::clone(gfx)));
+        self.loader = Some(Loader::new(Rc::clone(gfx)));
 
         let loader = self.loader.as_mut().unwrap();
 
@@ -159,6 +158,20 @@ impl Application for Sandbox {
             .unwrap();
         backpack_transform.position = Vec3::new(-2.0, 5.0, -4.0);
         backpack_transform.scale = Vec3::new(0.01, 0.01, 0.01);
+
+        let pug = loader
+            .load_model(
+                Path::new("./assets/models/pug/a_pug.glb.model"),
+                &mut self.scene,
+            )
+            .expect("Failed to load pug model");
+        let pug_transform = self
+            .scene
+            .world_mut()
+            .get_component_mut::<LocalTransformComponent>(pug)
+            .unwrap();
+        pug_transform.position = Vec3::new(60.0, 2.0, -18.0);
+        pug_transform.scale = Vec3::new(10.0, 10.0, 10.0);
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
@@ -200,6 +213,13 @@ impl Application for Sandbox {
             self.camera.move_y(-camera_speed);
         }
 
+        // tracing::info!(
+        //     "Camera: x: {}, y: {}, z: {}",
+        //     self.camera.position().x,
+        //     self.camera.position().y,
+        //     self.camera.position().z
+        // );
+
         // update camera component
         let (_, camera_comp) = world.query_mut::<CameraComponent>().next().unwrap();
         camera_comp.position = self.camera.position();
@@ -222,16 +242,14 @@ impl Application for Sandbox {
         false
     }
 
-    fn render(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {
+    fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {
         self.renderer.as_ref().unwrap().render(&self.scene);
     }
 
-    fn on_resize(&mut self, width: u32, height: u32, gl: &Rc<glow::Context>) {
+    fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
         tracing::info!("resized to {width}x{height}");
-        unsafe {
-            gl.viewport(0, 0, width as i32, height as i32);
-            self.camera.set_aspect(width as f32 / height as f32);
-        }
+        gfx.set_viewport(0, 0, width as i32, height as i32);
+        self.camera.set_aspect(width as f32 / height as f32);
     }
 }
 

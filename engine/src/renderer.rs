@@ -3,8 +3,8 @@ pub mod mesh;
 pub mod shader;
 pub mod texture;
 pub mod uniform;
-pub mod vertex;
 
+use crate::GfxContext;
 use crate::scene::*;
 pub use material::Material;
 pub use mesh::Mesh;
@@ -13,21 +13,17 @@ use std::rc::Rc;
 pub use texture::Texture;
 
 pub struct Renderer {
-    gl: Rc<glow::Context>,
+    gfx: Rc<GfxContext>,
 }
 
 impl Renderer {
-    pub fn new(gl: Rc<glow::Context>) -> Self {
-        Self { gl }
+    pub fn new(gfx: Rc<GfxContext>) -> Self {
+        Self { gfx }
     }
 
     pub fn render(&self, scene: &Scene) {
-        use glow::HasContext;
-
-        unsafe {
-            self.gl
-                .clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
-        }
+        self.gfx
+            .clear(GfxContext::COLOR_BUFFER_BIT | GfxContext::DEPTH_BUFFER_BIT);
 
         let world = scene.world();
         let lighting = world.query::<LightingComponent>().next().map(|(_, c)| c);

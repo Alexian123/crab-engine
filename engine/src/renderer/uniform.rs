@@ -1,61 +1,47 @@
-use glow::HasContext;
+use crate::{GfxContext, gfx::buffers::UniformLocationObject};
 
 pub trait Uniform: Copy {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation);
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject);
 }
 
 impl Uniform for f32 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_1_f32(Some(&location), *self);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_1_f32(Some(&location), *self);
     }
 }
 
 impl Uniform for i32 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_1_i32(Some(&location), *self);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_1_i32(Some(&location), *self);
     }
 }
 
 impl Uniform for u32 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_1_u32(Some(&location), *self);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_1_u32(Some(&location), *self);
     }
 }
 
 impl Uniform for glam::Vec2 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_2_f32(Some(&location), self.x, self.y);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_2_f32(Some(&location), self.x, self.y);
     }
 }
 
 impl Uniform for glam::Vec3 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_3_f32(Some(&location), self.x, self.y, self.z);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_3_f32(Some(&location), self.x, self.y, self.z);
     }
 }
 
 impl Uniform for glam::Vec4 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_4_f32(Some(&location), self.x, self.y, self.z, self.w);
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_4_f32(Some(&location), self.x, self.y, self.z, self.w);
     }
 }
 
 impl Uniform for glam::Mat4 {
-    fn upload(&self, gl: &glow::Context, location: &glow::UniformLocation) {
-        unsafe {
-            gl.uniform_matrix_4_f32_slice(Some(&location), false, self.as_ref());
-        }
+    fn upload(&self, gfx: &GfxContext, location: &UniformLocationObject) {
+        gfx.uniform_matrix_4_f32_slice(Some(&location), false, self.as_ref());
     }
 }

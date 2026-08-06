@@ -4,7 +4,8 @@ mod model_file_loader;
 mod shader_loader;
 mod texture_loader;
 
-use crate::renderer::Material;
+use crate::GfxContext;
+use crate::renderer::{Material, Mesh};
 use crate::scene::components::*;
 use crate::scene::{Entity, Scene};
 use engine_asset::*;
@@ -30,11 +31,11 @@ pub struct Loader {
 
 // TODO: DO NOT FAIL SILENTLY EVER
 impl Loader {
-    pub fn new(gl: Rc<glow::Context>) -> Self {
+    pub fn new(gfx: Rc<GfxContext>) -> Self {
         Self {
-            meshes: MeshLoader::new(Rc::clone(&gl)),
-            shaders: ShaderLoader::new(Rc::clone(&gl)),
-            textures: TextureLoader::new(Rc::clone(&gl)),
+            meshes: MeshLoader::new(Rc::clone(&gfx)),
+            shaders: ShaderLoader::new(Rc::clone(&gfx)),
+            textures: TextureLoader::new(Rc::clone(&gfx)),
             material_files: MaterialFileLoader::new(),
             model_files: ModelFileLoader::new(),
             material_cache: HashMap::new(),

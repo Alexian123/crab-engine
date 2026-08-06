@@ -1,3 +1,4 @@
+pub use crate::GfxContext;
 pub use crate::renderer::ShaderProgram;
 use crate::utils::preprocess_shader;
 use std::collections::HashMap;
@@ -24,14 +25,14 @@ struct ShaderKey {
 }
 
 pub struct ShaderLoader {
-    gl: Rc<glow::Context>,
+    gfx: Rc<GfxContext>,
     cache: HashMap<ShaderKey, Rc<ShaderProgram>>,
 }
 
 impl ShaderLoader {
-    pub fn new(gl: Rc<glow::Context>) -> Self {
+    pub fn new(gfx: Rc<GfxContext>) -> Self {
         Self {
-            gl,
+            gfx,
             cache: HashMap::new(),
         }
     }
@@ -60,7 +61,7 @@ impl ShaderLoader {
         let fragment_source = preprocess_shader(&key.fragment)?;
 
         let shader = Rc::new(
-            ShaderProgram::new(Rc::clone(&self.gl), &vertex_source, &fragment_source)
+            ShaderProgram::new(Rc::clone(&self.gfx), &vertex_source, &fragment_source)
                 .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
         );
 

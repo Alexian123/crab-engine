@@ -1,9 +1,12 @@
-use glow::HasContext;
+use crate::GfxContext;
+use crate::gfx::buffers::{
+    TextureFilterMode, TextureFormat, TextureObject, TextureTarget, TextureWrapMode,
+};
 use std::rc::Rc;
 
 pub struct Texture {
-    gl: Rc<glow::Context>,
-    texture: glow::Texture,
+    gfx: Rc<GfxContext>,
+    texture: TextureObject,
     width: u32,
     height: u32,
     channels: u32,
@@ -11,56 +14,50 @@ pub struct Texture {
 
 impl Texture {
     pub fn new(
-        gl: Rc<glow::Context>,
+        gfx: Rc<GfxContext>,
         width: u32,
         height: u32,
         channels: u32,
         data: &[u8],
     ) -> Result<Self, String> {
-        let texture = unsafe { gl.create_texture()? };
+        let texture = gfx.create_texture_object()?;
 
         let (internal_format, format) = match channels {
-            1 => (glow::RED, glow::RED),
-            2 => (glow::RG, glow::RG),
-            3 => (glow::RGB, glow::RGB),
-            4 => (glow::RGBA, glow::RGBA),
+            1 => (TextureFormat::RED, TextureFormat::RED),
+            2 => (TextureFormat::RG, TextureFormat::RG),
+            3 => (TextureFormat::RGB, TextureFormat::RGB),
+            4 => (TextureFormat::RGBA, TextureFormat::RGBA),
             _ => return Err("Invalid number of channels".to_string()),
         };
+        gfx.bind_texture(TextureTarget::Texture2D, Some(&texture));
 
-        unsafe {
-            gl.bind_texture(glow::TEXTURE_2D, Some(texture));
+        gfx.set_tex_image_2d(
+            TextureTarget::Texture2D,
+            0,
+            internal_format,
+            width as i32,
+            height as i32,
+            0,
+            format,
+            Some(data),
+        );
 
-            gl.tex_image_2d(
-                glow::TEXTURE_2D,
-                0,
-                internal_format as i32,
-                width as i32,
-                height as i32,
-                0,
-                format,
-                glow::UNSIGNED_BYTE,
-                Some(data),
-            );
+        gfx.generate_mipmap(TextureTarget::Texture2D);
 
-            gl.generate_mipmap(glow::TEXTURE_2D);
+        gfx.set_texture_wrap(
+            TextureTarget::Texture2D,
+            Some(TextureWrapMode::Repeat),
+            Some(TextureWrapMode::Repeat),
+        );
 
-            gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_S, glow::REPEAT as i32);
-            gl.tex_parameter_i32(glow::TEXTURE_2D, glow::TEXTURE_WRAP_T, glow::REPEAT as i32);
-
-            gl.tex_parameter_i32(
-                glow::TEXTURE_2D,
-                glow::TEXTURE_MIN_FILTER,
-                glow::LINEAR_MIPMAP_LINEAR as i32,
-            );
-            gl.tex_parameter_i32(
-                glow::TEXTURE_2D,
-                glow::TEXTURE_MAG_FILTER,
-                glow::LINEAR as i32,
-            );
-        }
+        gfx.set_texture_min_mag_filter(
+            TextureTarget::Texture2D,
+            Some(TextureFilterMode::LinearMipmapLinear),
+            Some(TextureFilterMode::Linear),
+        );
 
         Ok(Self {
-            gl,
+            gfx,
             texture,
             width,
             height,
@@ -69,17 +66,14 @@ impl Texture {
     }
 
     pub fn bind(&self, unit: u32) {
-        unsafe {
-            self.gl.active_texture(glow::TEXTURE0 + unit.min(15));
-            self.gl.bind_texture(glow::TEXTURE_2D, Some(self.texture));
-        }
+        self.gfx.set_active_texture(unit.min(15));
+        self.gfx
+            .bind_texture(TextureTarget::Texture2D, Some(&self.texture));
     }
 
     pub fn unbind(&self, unit: u32) {
-        unsafe {
-            self.gl.active_texture(glow::TEXTURE0 + unit.min(15));
-            self.gl.bind_texture(glow::TEXTURE_2D, None);
-        }
+        self.gfx.set_active_texture(unit.min(15));
+        self.gfx.bind_texture(TextureTarget::Texture2D, None);
     }
 
     pub fn width(&self) -> u32 {
@@ -97,8 +91,6 @@ impl Texture {
 
 impl Drop for Texture {
     fn drop(&mut self) {
-        unsafe {
-            self.gl.delete_texture(self.texture);
-        }
+        self.gfx.delete_texture_object(&self.texture);
     }
 }

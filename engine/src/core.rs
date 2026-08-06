@@ -1,8 +1,5 @@
-use std::ffi::CString;
-use std::num::NonZeroU32;
-
+use crate::GfxContext;
 use crate::input::InputManager;
-
 use glow::HasContext;
 use glutin::config::ConfigTemplateBuilder;
 use glutin::context::{ContextApi, ContextAttributesBuilder, PossiblyCurrentContext, Version};
@@ -11,35 +8,51 @@ use glutin::prelude::*;
 use glutin::surface::{Surface, SwapInterval, WindowSurface};
 use glutin_winit::{DisplayBuilder, GlWindow};
 use raw_window_handle::HasWindowHandle;
+use std::ffi::CString;
+use std::num::NonZeroU32;
 use std::rc::Rc;
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::event_loop::ActiveEventLoop;
+use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{Window, WindowId};
 
 pub trait Application {
-    fn init(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
+    fn init(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {}
     fn update(&mut self, _input: &InputManager, _dt: f32) -> bool {
         // return true to exit
         false
     }
-    fn render(&mut self, _window: &Window, _gl: &Rc<glow::Context>) {}
-    fn on_resize(&mut self, _width: u32, _height: u32, _gl: &Rc<glow::Context>) {}
+    fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {}
+    fn on_resize(&mut self, _width: u32, _height: u32, _gfx: &Rc<GfxContext>) {}
 }
 
 struct GlState {
-    gl: Rc<glow::Context>,
+    gfx: Rc<GfxContext>,
     gl_surface: Surface<WindowSurface>,
     gl_context: PossiblyCurrentContext,
 }
 
-struct Runner<A: Application> {
+pub struct Runner<A: Application> {
     app: A,
     title: String,
     window: Option<Window>,
     gl_state: Option<GlState>,
     input: InputManager,
     last_frame_time: std::time::Instant,
+}
+
+impl<A: Application> Runner<A> {
+    pub fn new(app: A, title: String) -> Self {
+        Self {
+            app,
+            title,
+            window: None,
+            gl_state: None,
+            input: InputManager::new(),
+            last_frame_time: std::time::Instant::now(),
+        }
+    }
 }
 
 impl<A: Application> ApplicationHandler for Runner<A> {
@@ -124,12 +137,12 @@ impl<A: Application> ApplicationHandler for Runner<A> {
             tracing::info!("GL renderer: {}", gl.get_parameter_string(glow::RENDERER));
         }
 
-        let gl = Rc::new(gl);
+        let gfx = Rc::new(GfxContext::new(gl));
 
-        self.app.init(&window, &gl);
+        self.app.init(&window, &gfx);
 
         self.gl_state = Some(GlState {
-            gl,
+            gfx,
             gl_surface,
             gl_context,
         });
@@ -152,7 +165,7 @@ impl<A: Application> ApplicationHandler for Runner<A> {
                             NonZeroU32::new(size.width).unwrap(),
                             NonZeroU32::new(size.height).unwrap(),
                         );
-                        self.app.on_resize(size.width, size.height, &gl_state.gl);
+                        self.app.on_resize(size.width, size.height, &gl_state.gfx);
                     }
                 }
             }
@@ -165,7 +178,7 @@ impl<A: Application> ApplicationHandler for Runner<A> {
                 }
 
                 if let (Some(window), Some(gl_state)) = (&self.window, &self.gl_state) {
-                    self.app.render(window, &gl_state.gl);
+                    self.app.render(window, &gl_state.gfx);
                     gl_state
                         .gl_surface
                         .swap_buffers(&gl_state.gl_context)
@@ -193,14 +206,7 @@ pub fn run<A: Application + 'static>(title: &str, app: A) {
     let event_loop = EventLoop::new().expect("failed to create event loop");
     event_loop.set_control_flow(ControlFlow::Poll);
 
-    let mut runner = Runner {
-        app,
-        title: title.to_string(),
-        window: None,
-        gl_state: None,
-        input: InputManager::new(),
-        last_frame_time: std::time::Instant::now(),
-    };
+    let mut runner = Runner::new(app, title.to_string());
 
     event_loop
         .run_app(&mut runner)

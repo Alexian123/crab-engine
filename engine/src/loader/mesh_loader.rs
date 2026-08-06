@@ -1,5 +1,6 @@
-pub use crate::renderer::Mesh;
-use crate::renderer::vertex::*;
+use crate::GfxContext;
+use crate::gfx::vertex::*;
+use crate::renderer::Mesh;
 use bincode::{config, serde};
 use engine_asset::MeshAsset;
 use std::collections::HashMap;
@@ -20,14 +21,14 @@ pub enum MeshLoadError {
 }
 
 pub struct MeshLoader {
-    gl: Rc<glow::Context>,
+    gfx: Rc<GfxContext>,
     cache: HashMap<PathBuf, Rc<Mesh>>,
 }
 
 impl MeshLoader {
-    pub fn new(gl: Rc<glow::Context>) -> Self {
+    pub fn new(gfx: Rc<GfxContext>) -> Self {
         Self {
-            gl,
+            gfx,
             cache: HashMap::new(),
         }
     }
@@ -86,7 +87,7 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gl), &vertices, &mesh_data.indices, &layout)
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &mesh_data.indices, &layout)
                 .map_err(MeshLoadError::InvalidMesh)?,
         );
 
@@ -169,7 +170,7 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gl), &vertices, &[], &layout)
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], &layout)
                 .map_err(MeshLoadError::InvalidMesh)?,
         );
 
