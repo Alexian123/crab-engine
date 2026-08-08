@@ -76,6 +76,34 @@ impl Scene {
             .map(|(entity, _)| entity)
     }
 
+    pub fn create_terrain_tile(&mut self, grid_x: i32, grid_z: i32, size: u32) -> Entity {
+        let entity = self.world.create_entity();
+        self.world
+            .add_component(entity, TerrainTileComponent { grid_x, grid_z });
+        self.world.add_component(
+            entity,
+            LocalTransformComponent {
+                position: glam::Vec3::new(
+                    grid_x as f32 * size as f32,
+                    0.0,
+                    grid_z as f32 * size as f32,
+                ),
+                rotation: glam::Quat::IDENTITY,
+                scale: glam::Vec3::ONE,
+            },
+        );
+        entity
+    }
+
+    pub fn get_terrain_tile(&self, grid_x: i32, grid_z: i32) -> Option<Entity> {
+        for (entity, tile) in self.world.query::<TerrainTileComponent>() {
+            if tile.grid_x == grid_x && tile.grid_z == grid_z {
+                return Some(entity);
+            }
+        }
+        None
+    }
+
     fn update_world_transforms(&mut self) {
         let roots: Vec<Entity> = self
             .world

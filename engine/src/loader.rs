@@ -247,6 +247,24 @@ impl Loader {
         }
     }
 
+    pub fn load_terrain_mesh(
+        &mut self,
+        size: usize,
+        vertices_per_side: usize,
+        uv_scale: f32,
+    ) -> Option<Rc<Mesh>> {
+        match self
+            .meshes
+            .load_terrain_mesh(size, vertices_per_side, uv_scale)
+        {
+            Ok(mesh) => Some(mesh),
+            Err(err) => {
+                tracing::error!("Failed to load terrain mesh: {}", err);
+                None
+            }
+        }
+    }
+
     pub fn load_shader(&mut self, vertex: &Path, fragment: &Path) -> Option<Rc<ShaderProgram>> {
         match self.shaders.load(vertex, fragment) {
             Ok(shader) => Some(shader),

@@ -95,6 +95,98 @@ impl MeshLoader {
         Ok(mesh)
     }
 
+    pub fn load_terrain_mesh(
+        &mut self,
+        size: usize,
+        vertices_per_side: usize,
+        uv_scale: f32,
+    ) -> Result<Rc<Mesh>, MeshLoadError> {
+        let path = PathBuf::from(format!(
+            "terrain_{}_{}_{}.obj",
+            size, vertices_per_side, uv_scale
+        ));
+
+        if let Some(mesh) = self.cache.get(&path) {
+            return Ok(Rc::clone(mesh));
+        }
+
+        let count = vertices_per_side * vertices_per_side;
+        let mut vertices: Vec<f32> = Vec::with_capacity(count * 8);
+
+        for i in 0..vertices_per_side {
+            for j in 0..vertices_per_side {
+                let x = (j as f32 / (vertices_per_side - 1) as f32) * size as f32;
+                let z = (i as f32 / (vertices_per_side - 1) as f32) * size as f32;
+
+                // positions
+                vertices.push(x);
+                vertices.push(0.0);
+                vertices.push(z);
+                // texture coords
+                vertices.push(x / uv_scale);
+                vertices.push(z / uv_scale);
+                // normals
+                vertices.push(0.0);
+                vertices.push(1.0);
+                vertices.push(0.0);
+            }
+        }
+
+        let mut indices: Vec<u32> = vec![0; 6 * (vertices_per_side - 1) * (vertices_per_side - 1)];
+        let mut idx = 0;
+
+        for i in 0..(vertices_per_side - 1) {
+            for j in 0..(vertices_per_side - 1) {
+                let top_left = i * vertices_per_side + j;
+                let top_right = top_left + 1;
+                let bottom_left = (i + 1) * vertices_per_side + j;
+                let bottom_right = bottom_left + 1;
+
+                indices[idx] = top_left as u32;
+                indices[idx + 1] = bottom_left as u32;
+                indices[idx + 2] = top_right as u32;
+                indices[idx + 3] = top_right as u32;
+                indices[idx + 4] = bottom_left as u32;
+                indices[idx + 5] = bottom_right as u32;
+                idx += 6;
+            }
+        }
+
+        let layout = VertexLayout {
+            attribs: vec![
+                VertexAttribute {
+                    location: 0,
+                    count: 3,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 0,
+                },
+                VertexAttribute {
+                    location: 2,
+                    count: 2,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 3 * std::mem::size_of::<f32>(),
+                },
+                VertexAttribute {
+                    location: 3,
+                    count: 3,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 5 * std::mem::size_of::<f32>(),
+                },
+            ],
+        };
+
+        let mesh = Rc::new(
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &indices, &layout)
+                .map_err(MeshLoadError::InvalidMesh)?,
+        );
+
+        self.cache.insert(path, Rc::clone(&mesh));
+        Ok(mesh)
+    }
+
     pub fn load_cube(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
         let path = PathBuf::from("cube.obj");
 

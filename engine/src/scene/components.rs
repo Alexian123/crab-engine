@@ -66,3 +66,10 @@ pub struct LightingComponent {
 }
 
 impl Component for LightingComponent {}
+
+pub struct TerrainTileComponent {
+    pub grid_x: i32,
+    pub grid_z: i32,
+}
+
+impl Component for TerrainTileComponent {}

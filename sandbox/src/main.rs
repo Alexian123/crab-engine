@@ -36,13 +36,41 @@ impl Application for Sandbox {
 
         let loader = self.loader.as_mut().unwrap();
 
+        let terrain_mesh = loader.load_terrain_mesh(800, 128, 10.0).unwrap();
+
+        let terrain_material = loader
+            .load_material(Path::new("./assets/materials/terrain.mat"), None)
+            .unwrap();
+
+        let terrains = vec![
+            self.scene.create_terrain_tile(0, 0, 800),
+            self.scene.create_terrain_tile(-1, 0, 800),
+            self.scene.create_terrain_tile(0, -1, 800),
+            self.scene.create_terrain_tile(-1, -1, 800),
+        ];
+
+        let world = self.scene.world_mut();
+
+        for terrain in &terrains {
+            world.add_component(
+                *terrain,
+                MeshComponent {
+                    mesh: Rc::clone(&terrain_mesh),
+                },
+            );
+            world.add_component(
+                *terrain,
+                MaterialComponent {
+                    material: Rc::clone(&terrain_material),
+                },
+            );
+        }
+
         let cube_mesh = loader.load_cube_mesh().unwrap();
 
         let crate_material = loader
             .load_material(Path::new("./assets/materials/crate.mat"), None)
             .unwrap();
-
-        let world = self.scene.world_mut();
 
         let camera_entity = world.create_entity();
         world.add_component(
