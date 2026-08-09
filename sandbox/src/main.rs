@@ -45,10 +45,10 @@ impl Application for Sandbox {
             .load_material(Path::new("./assets/materials/terrain.mat"), None)
             .unwrap();
 
-        self.scene.create_terrain_tile(0, 0, -10.0, 200);
-        self.scene.create_terrain_tile(-1, 0, -10.0, 200);
-        self.scene.create_terrain_tile(0, -1, -10.0, 200);
-        self.scene.create_terrain_tile(-1, -1, -10.0, 200);
+        self.scene.create_terrain_tile(0, 0, -10.0, 800);
+        self.scene.create_terrain_tile(-1, 0, -10.0, 800);
+        self.scene.create_terrain_tile(0, -1, -10.0, 800);
+        self.scene.create_terrain_tile(-1, -1, -10.0, 800);
 
         let world = self.scene.world_mut();
 
@@ -58,9 +58,9 @@ impl Application for Sandbox {
             .collect();
 
         for (terrain, grid_x, grid_z) in terrain_tiles {
-            let height_generator = HeightGenerator::new(0xdeadbeef, grid_x, grid_z, 32);
+            let height_generator = HeightGenerator::new(0xdeadbeef, grid_x, grid_z, 128);
             let terrain_mesh = loader
-                .load_terrain_mesh(200, 32, 10.0, Some(&height_generator))
+                .load_terrain_mesh(800, 128, 10.0, Some(&height_generator))
                 .unwrap();
             world.add_component(
                 terrain,
@@ -249,7 +249,11 @@ impl Application for Sandbox {
             self.camera.move_pitch(-delta.1 as f32 * sensitivity);
         }
 
-        let camera_speed = dt * 5.0;
+        let camera_speed = if input.is_key_down(KeyCode::ShiftLeft) {
+            dt * 100.0
+        } else {
+            dt * 10.0
+        };
         if input.is_key_down(KeyCode::KeyW) {
             self.camera.move_z(camera_speed);
         }
@@ -315,7 +319,7 @@ fn main() {
         renderer: None,
         loader: None,
         scene: Scene::new(),
-        camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 100.0),
+        camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
     };
     run("Sandbox", app);
 }

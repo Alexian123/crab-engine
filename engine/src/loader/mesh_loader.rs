@@ -109,7 +109,7 @@ impl MeshLoader {
             vertices_per_side,
             uv_scale,
             if let Some(generator) = height_generator {
-                generator.seed()
+                generator.get_hash()
             } else {
                 0
             }
@@ -141,11 +141,16 @@ impl MeshLoader {
                 // texture coords
                 vertices.push(x / uv_scale);
                 vertices.push(z / uv_scale);
+
                 // normals
-                //
-                vertices.push(0.0);
-                vertices.push(1.0);
-                vertices.push(0.0);
+                let normal: glam::Vec3 = if let Some(generator) = height_generator {
+                    generator.calculate_normal(j as i32, i as i32)
+                } else {
+                    glam::vec3(0.0, 1.0, 0.0)
+                };
+                vertices.push(normal.x);
+                vertices.push(normal.y);
+                vertices.push(normal.z);
             }
         }
 

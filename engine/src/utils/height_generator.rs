@@ -1,5 +1,6 @@
-use rand::prelude::*;
+use std::hash::{DefaultHasher, Hash, Hasher};
 
+#[derive(Hash)]
 pub struct HeightGenerator {
     seed: u64,
     x_offset: i32,
@@ -8,8 +9,8 @@ pub struct HeightGenerator {
 
 impl HeightGenerator {
     const OCTAVES: u32 = 3;
-    const AMPLITUDE: f32 = 75.0;
-    const ROUGHNESS: f32 = 0.3;
+    const AMPLITUDE: f32 = 25.0;
+    const ROUGHNESS: f32 = 0.05;
 
     pub fn new(seed: u64, grid_x: i32, grid_z: i32, vertices_per_side: usize) -> Self {
         Self {
@@ -19,8 +20,10 @@ impl HeightGenerator {
         }
     }
 
-    pub fn seed(&self) -> u64 {
-        self.seed
+    pub fn get_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash(&mut hasher);
+        hasher.finish()
     }
 
     pub fn generate(&self, x: i32, z: i32) -> f32 {
@@ -35,6 +38,14 @@ impl HeightGenerator {
             ) * amp;
         }
         total
+    }
+
+    pub fn calculate_normal(&self, x: i32, z: i32) -> glam::Vec3 {
+        let height_left = self.generate(x - 1, z);
+        let height_right = self.generate(x + 1, z);
+        let height_up = self.generate(x, z + 1);
+        let height_down = self.generate(x, z - 1);
+        glam::Vec3::new(height_left - height_right, 2.0, height_down - height_up).normalize()
     }
 
     fn get_interpolated_noise(&self, x: f32, z: f32) -> f32 {
@@ -70,14 +81,31 @@ impl HeightGenerator {
     }
 
     fn get_noise(&self, x: i32, z: i32) -> f32 {
-        let seed = (x as i64)
+        let mut h = (x as i64)
             .wrapping_mul(49632)
             .wrapping_add((z as i64).wrapping_mul(325176))
-            .wrapping_add(self.seed as i64);
+            .wrapping_add(self.seed as i64) as u64;
 
-        let mut rng = StdRng::seed_from_u64(seed as u64);
-        rng.r#gen::<f32>() * 2.0 - 1.0
+        // nteger hash (splitmix64-style)
+        h ^= h >> 33;
+        h = h.wrapping_mul(0xff51afd7ed558ccd);
+        h ^= h >> 33;
+        h = h.wrapping_mul(0xc4ceb9fe1a85ec53);
+        h ^= h >> 33;
+
+        ((h as u32) as f32 / u32::MAX as f32) * 2.0 - 1.0
     }
+
+    // fn get_noise(&self, x: i32, z: i32) -> f32 {
+    //     use rand::prelude::*;
+    //     let seed = (x as i64)
+    //         .wrapping_mul(49632)
+    //         .wrapping_add((z as i64).wrapping_mul(325176))
+    //         .wrapping_add(self.seed as i64);
+
+    //     let mut rng = StdRng::seed_from_u64(seed as u64);
+    //     rng.r#gen::<f32>() * 2.0 - 1.0
+    // }
 
     fn interpolate(&self, a: f32, b: f32, blend: f32) -> f32 {
         let theta = blend * std::f32::consts::PI;
