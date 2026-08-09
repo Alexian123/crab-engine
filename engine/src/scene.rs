@@ -76,7 +76,13 @@ impl Scene {
             .map(|(entity, _)| entity)
     }
 
-    pub fn create_terrain_tile(&mut self, grid_x: i32, grid_z: i32, size: u32) -> Entity {
+    pub fn create_terrain_tile(
+        &mut self,
+        grid_x: i32,
+        grid_z: i32,
+        y_offset: f32,
+        size: u32,
+    ) -> Entity {
         let entity = self.world.create_entity();
         self.world
             .add_component(entity, TerrainTileComponent { grid_x, grid_z });
@@ -85,7 +91,7 @@ impl Scene {
             LocalTransformComponent {
                 position: glam::Vec3::new(
                     grid_x as f32 * size as f32,
-                    0.0,
+                    y_offset,
                     grid_z as f32 * size as f32,
                 ),
                 rotation: glam::Quat::IDENTITY,

@@ -2,6 +2,7 @@ use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
 use engine::scene::*;
+use engine::utils::HeightGenerator;
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
 use std::path::Path;
@@ -20,7 +21,7 @@ struct Sandbox {
 
 impl Application for Sandbox {
     fn init(&mut self, window: &Window, gfx: &Rc<GfxContext>) {
-        tracing::info!("sandbox initialized");
+        tracing::info!("Sandbox initialization started");
 
         let _ = window.request_inner_size(PhysicalSize::new(1280, 720));
         window
@@ -34,43 +35,50 @@ impl Application for Sandbox {
         self.renderer = Some(Renderer::new(Rc::clone(gfx)));
         self.loader = Some(Loader::new(Rc::clone(gfx)));
 
+        tracing::info!("Scene initialization started");
+
         let loader = self.loader.as_mut().unwrap();
 
-        let terrain_mesh = loader.load_terrain_mesh(800, 128, 10.0).unwrap();
+        tracing::info!("Loading terrain...");
 
         let terrain_material = loader
             .load_material(Path::new("./assets/materials/terrain.mat"), None)
             .unwrap();
 
-        let terrains = vec![
-            self.scene.create_terrain_tile(0, 0, 800),
-            self.scene.create_terrain_tile(-1, 0, 800),
-            self.scene.create_terrain_tile(0, -1, 800),
-            self.scene.create_terrain_tile(-1, -1, 800),
-        ];
+        self.scene.create_terrain_tile(0, 0, -10.0, 200);
+        self.scene.create_terrain_tile(-1, 0, -10.0, 200);
+        self.scene.create_terrain_tile(0, -1, -10.0, 200);
+        self.scene.create_terrain_tile(-1, -1, -10.0, 200);
 
         let world = self.scene.world_mut();
 
-        for terrain in &terrains {
+        let terrain_tiles: Vec<(Entity, i32, i32)> = world
+            .query::<TerrainTileComponent>()
+            .map(|(entity, tile)| (entity, tile.grid_x, tile.grid_z))
+            .collect();
+
+        for (terrain, grid_x, grid_z) in terrain_tiles {
+            let height_generator = HeightGenerator::new(0xdeadbeef, grid_x, grid_z, 32);
+            let terrain_mesh = loader
+                .load_terrain_mesh(200, 32, 10.0, Some(&height_generator))
+                .unwrap();
             world.add_component(
-                *terrain,
+                terrain,
                 MeshComponent {
                     mesh: Rc::clone(&terrain_mesh),
                 },
             );
             world.add_component(
-                *terrain,
+                terrain,
                 MaterialComponent {
                     material: Rc::clone(&terrain_material),
                 },
             );
         }
 
-        let cube_mesh = loader.load_cube_mesh().unwrap();
+        tracing::info!("Done.");
 
-        let crate_material = loader
-            .load_material(Path::new("./assets/materials/crate.mat"), None)
-            .unwrap();
+        tracing::info!("Loading player...");
 
         let camera_entity = world.create_entity();
         world.add_component(
@@ -81,6 +89,16 @@ impl Application for Sandbox {
                 projection: self.camera.projection(),
             },
         );
+
+        tracing::info!("Done.");
+
+        tracing::info!("Loading primitive models...");
+
+        let cube_mesh = loader.load_cube_mesh().unwrap();
+
+        let crate_material = loader
+            .load_material(Path::new("./assets/materials/crate.mat"), None)
+            .unwrap();
 
         let crate_entity = world.create_entity();
         world.add_component(
@@ -103,6 +121,10 @@ impl Application for Sandbox {
                 material: Rc::clone(&crate_material),
             },
         );
+
+        tracing::info!("Done.");
+
+        tracing::info!("Loading lights...");
 
         let lighting_entity = world.create_entity();
         world.add_component(
@@ -171,6 +193,10 @@ impl Application for Sandbox {
             | (((lighting.point_lights.len() as u32) & 0xFF) << 8)
             | (((lighting.spot_lights.len() as u32) & 0xFF) << 16);
 
+        tracing::info!("Done.");
+
+        tracing::info!("Loading asset models...");
+
         let backpack = loader
             .load_model(
                 Path::new(
@@ -200,6 +226,8 @@ impl Application for Sandbox {
             .unwrap();
         pug_transform.position = Vec3::new(60.0, 2.0, -18.0);
         pug_transform.scale = Vec3::new(10.0, 10.0, 10.0);
+
+        tracing::info!("Done.");
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
@@ -221,7 +249,7 @@ impl Application for Sandbox {
             self.camera.move_pitch(-delta.1 as f32 * sensitivity);
         }
 
-        let camera_speed = dt * 2.5;
+        let camera_speed = dt * 5.0;
         if input.is_key_down(KeyCode::KeyW) {
             self.camera.move_z(camera_speed);
         }

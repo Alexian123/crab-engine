@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+engine_asset = { path = "../engine_asset" }
 winit = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -19,4 +20,4 @@ image = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true }
-engine_asset = { path = "../engine_asset" }
+rand = { workspace = true }

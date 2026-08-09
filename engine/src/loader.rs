@@ -8,6 +8,7 @@ use crate::GfxContext;
 use crate::renderer::{Material, Mesh};
 use crate::scene::components::*;
 use crate::scene::{Entity, Scene};
+use crate::utils::HeightGenerator;
 use engine_asset::*;
 use glam::{Quat, Vec3};
 use material_file_loader::*;
@@ -252,10 +253,11 @@ impl Loader {
         size: usize,
         vertices_per_side: usize,
         uv_scale: f32,
+        height_generator: Option<&HeightGenerator>,
     ) -> Option<Rc<Mesh>> {
         match self
             .meshes
-            .load_terrain_mesh(size, vertices_per_side, uv_scale)
+            .load_terrain_mesh(size, vertices_per_side, uv_scale, height_generator)
         {
             Ok(mesh) => Some(mesh),
             Err(err) => {

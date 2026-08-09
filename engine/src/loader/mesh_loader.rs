@@ -1,6 +1,7 @@
 use crate::GfxContext;
 use crate::gfx::vertex::*;
 use crate::renderer::Mesh;
+use crate::utils::HeightGenerator;
 use bincode::{config, serde};
 use engine_asset::MeshAsset;
 use std::collections::HashMap;
@@ -100,10 +101,18 @@ impl MeshLoader {
         size: usize,
         vertices_per_side: usize,
         uv_scale: f32,
+        height_generator: Option<&HeightGenerator>,
     ) -> Result<Rc<Mesh>, MeshLoadError> {
         let path = PathBuf::from(format!(
-            "terrain_{}_{}_{}.obj",
-            size, vertices_per_side, uv_scale
+            "terrain_{}_{}_{}_{}.obj",
+            size,
+            vertices_per_side,
+            uv_scale,
+            if let Some(generator) = height_generator {
+                generator.seed()
+            } else {
+                0
+            }
         ));
 
         if let Some(mesh) = self.cache.get(&path) {
@@ -118,14 +127,22 @@ impl MeshLoader {
                 let x = (j as f32 / (vertices_per_side - 1) as f32) * size as f32;
                 let z = (i as f32 / (vertices_per_side - 1) as f32) * size as f32;
 
+                let height = if let Some(generator) = height_generator {
+                    generator.generate(j as i32, i as i32)
+                } else {
+                    0.0
+                };
+
                 // positions
                 vertices.push(x);
-                vertices.push(0.0);
+                vertices.push(height);
                 vertices.push(z);
+
                 // texture coords
                 vertices.push(x / uv_scale);
                 vertices.push(z / uv_scale);
                 // normals
+                //
                 vertices.push(0.0);
                 vertices.push(1.0);
                 vertices.push(0.0);

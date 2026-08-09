@@ -154,7 +154,7 @@ impl<A: Application> ApplicationHandler for Runner<A> {
         self.input.on_window_event(&event);
         match event {
             WindowEvent::CloseRequested => {
-                tracing::info!("close requested, shutting down");
+                tracing::info!("Close requested, shutting down");
                 event_loop.exit();
             }
             WindowEvent::Resized(size) => {
