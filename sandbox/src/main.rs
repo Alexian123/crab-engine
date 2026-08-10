@@ -1,8 +1,8 @@
 use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
+use engine::scene::terrain;
 use engine::scene::*;
-use engine::utils::HeightGenerator;
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
 use std::path::Path;
@@ -45,41 +45,22 @@ impl Application for Sandbox {
             .load_material(Path::new("./assets/materials/terrain.mat"), None)
             .unwrap();
 
-        self.scene.create_terrain_tile(0, 0, -10.0, 800);
-        self.scene.create_terrain_tile(-1, 0, -10.0, 800);
-        self.scene.create_terrain_tile(0, -1, -10.0, 800);
-        self.scene.create_terrain_tile(-1, -1, -10.0, 800);
-
-        let world = self.scene.world_mut();
-
-        let terrain_tiles: Vec<(Entity, i32, i32)> = world
-            .query::<TerrainTileComponent>()
-            .map(|(entity, tile)| (entity, tile.grid_x, tile.grid_z))
-            .collect();
-
-        for (terrain, grid_x, grid_z) in terrain_tiles {
-            let height_generator = HeightGenerator::new(0xdeadbeef, grid_x, grid_z, 128);
-            let terrain_mesh = loader
-                .load_terrain_mesh(800, 128, 10.0, Some(&height_generator))
-                .unwrap();
-            world.add_component(
-                terrain,
-                MeshComponent {
-                    mesh: Rc::clone(&terrain_mesh),
-                },
-            );
-            world.add_component(
-                terrain,
-                MaterialComponent {
-                    material: Rc::clone(&terrain_material),
-                },
-            );
-        }
-
+        terrain::generate_terrain_grid(
+            self.scene.world_mut(),
+            loader,
+            0xdeadbeef,
+            2,
+            -10.0,
+            800,
+            1,
+            10.0,
+            Some(terrain_material),
+        );
         tracing::info!("Done.");
 
         tracing::info!("Loading player...");
 
+        let world = self.scene.world_mut();
         let camera_entity = world.create_entity();
         world.add_component(
             camera_entity,

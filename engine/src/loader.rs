@@ -7,6 +7,7 @@ mod texture_loader;
 use crate::GfxContext;
 use crate::renderer::{Material, Mesh};
 use crate::scene::components::*;
+use crate::scene::set_parent;
 use crate::scene::{Entity, Scene};
 use crate::utils::HeightGenerator;
 use engine_asset::*;
@@ -160,13 +161,13 @@ impl Loader {
                 }
 
                 // set parent of child entity to current entity
-                scene.set_parent(child_entity, entity);
+                set_parent(scene.world_mut(), child_entity, entity);
             }
         }
 
         // set parent of current entity to parent entity
         if let Some(parent) = parent {
-            scene.set_parent(entity, parent);
+            set_parent(scene.world_mut(), entity, parent);
         }
 
         // recursively load children
