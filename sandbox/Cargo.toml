@@ -8,3 +8,4 @@ engine = { path = "../engine" }
 winit = { workspace = true }
 tracing = { workspace = true }
 glam = { workspace = true }
+rand = { workspace = true }

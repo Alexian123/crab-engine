@@ -4,11 +4,12 @@ use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
 use engine::scene::camera::ThirdPersonCamera;
-use engine::scene::terrain;
+use engine::scene::terrain::{self, get_height_at_point};
 use engine::scene::*;
 use engine::{Application, InputManager, run};
 use glam::{Mat4, Quat, Vec3};
 use movement::MovementController;
+use rand::Rng;
 use std::path::Path;
 use std::rc::Rc;
 use winit::dpi::PhysicalSize;
@@ -57,7 +58,7 @@ impl Application for Sandbox {
             -10.0,
             800,
             128,
-            10.0,
+            50.0,
             Some(terrain_material),
         );
         tracing::info!("Done.");
@@ -230,6 +231,30 @@ impl Application for Sandbox {
         self.scene
             .world_mut()
             .set_component::<NameComponent>(rat, NameComponent("player".to_string()));
+
+        let mut rng = rand::thread_rng();
+        for _ in 0..200 {
+            let x = rng.gen_range(0.0..1500.0);
+            let z = rng.gen_range(0.0..1500.0);
+            let y = get_height_at_point(x, z, self.scene.world()) - 10.0;
+
+            let tree = loader
+                .load_model(
+                    Path::new("./assets/models/palm_tree/quiver_tree_02_1k.gltf.model"),
+                    &mut self.scene,
+                )
+                .expect("Failed to load palm tree model");
+            let tree_transform = self
+                .scene
+                .world_mut()
+                .get_component_mut::<LocalTransformComponent>(tree)
+                .unwrap();
+
+            tree_transform.position = Vec3::new(x, y, z);
+            tree_transform.scale = Vec3::new(15.0, 15.0, 15.0);
+            tree_transform.rotation =
+                Quat::from_rotation_y(rng.gen_range(0.0..std::f32::consts::TAU));
+        }
 
         self.scene.update(self.movement_ctrl.get_active_camera());
 
