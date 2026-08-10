@@ -102,7 +102,7 @@ impl MeshLoader {
         vertices_per_side: usize,
         uv_scale: f32,
         height_generator: Option<&HeightGenerator>,
-    ) -> Result<Rc<Mesh>, MeshLoadError> {
+    ) -> Result<(Rc<Mesh>, Vec<f32>), MeshLoadError> {
         let path = PathBuf::from(format!(
             "terrain_{}_{}_{}_{}.obj",
             size,
@@ -116,11 +116,12 @@ impl MeshLoader {
         ));
 
         if let Some(mesh) = self.cache.get(&path) {
-            return Ok(Rc::clone(mesh));
+            return Ok((Rc::clone(mesh), Vec::new()));
         }
 
         let count = vertices_per_side * vertices_per_side;
         let mut vertices: Vec<f32> = Vec::with_capacity(count * 8);
+        let mut height_map: Vec<f32> = Vec::with_capacity(count);
 
         for i in 0..vertices_per_side {
             for j in 0..vertices_per_side {
@@ -133,6 +134,8 @@ impl MeshLoader {
                     0.0
                 };
 
+                height_map.push(height);
+
                 // positions
                 vertices.push(x);
                 vertices.push(height);
@@ -143,8 +146,14 @@ impl MeshLoader {
                 vertices.push(z / uv_scale);
 
                 // normals
-                let normal: glam::Vec3 = if let Some(generator) = height_generator {
-                    generator.calculate_normal(j as i32, i as i32)
+                let normal = if let Some(generator) = height_generator {
+                    let (x, z) = (j as i32, i as i32);
+                    let height_left = generator.generate(x - 1, z);
+                    let height_right = generator.generate(x + 1, z);
+                    let height_up = generator.generate(x, z + 1);
+                    let height_down = generator.generate(x, z - 1);
+                    glam::Vec3::new(height_left - height_right, 2.0, height_down - height_up)
+                        .normalize()
                 } else {
                     glam::vec3(0.0, 1.0, 0.0)
                 };
@@ -206,7 +215,7 @@ impl MeshLoader {
         );
 
         self.cache.insert(path, Rc::clone(&mesh));
-        Ok(mesh)
+        Ok((mesh, height_map))
     }
 
     pub fn load_cube(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {

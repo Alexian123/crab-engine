@@ -40,14 +40,6 @@ impl HeightGenerator {
         total
     }
 
-    pub fn calculate_normal(&self, x: i32, z: i32) -> glam::Vec3 {
-        let height_left = self.generate(x - 1, z);
-        let height_right = self.generate(x + 1, z);
-        let height_up = self.generate(x, z + 1);
-        let height_down = self.generate(x, z - 1);
-        glam::Vec3::new(height_left - height_right, 2.0, height_down - height_up).normalize()
-    }
-
     fn get_interpolated_noise(&self, x: f32, z: f32) -> f32 {
         let int_x = x as i32;
         let int_z = z as i32;

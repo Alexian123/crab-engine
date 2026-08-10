@@ -129,10 +129,10 @@ impl Application for Sandbox {
         lighting.directional_lights.push(DirectionalLight {
             color: LightColor {
                 ambient: Vec3::new(0.05, 0.05, 0.05),
-                diffuse: Vec3::new(0.4, 0.4, 0.4),
-                specular: Vec3::new(0.5, 0.5, 0.5),
+                diffuse: Vec3::new(0.6, 0.6, 0.6),
+                specular: Vec3::new(0.8, 0.8, 0.8),
             },
-            direction: Vec3::new(-0.2, -1.0, -0.3),
+            direction: Vec3::new(0.2, -1.0, 0.3),
         });
 
         lighting.point_lights.push(PointLight {

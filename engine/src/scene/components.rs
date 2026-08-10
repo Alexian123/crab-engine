@@ -70,6 +70,9 @@ impl Component for LightingComponent {}
 pub struct TerrainTileComponent {
     pub grid_x: i32,
     pub grid_z: i32,
+    pub tile_size: usize,
+    pub vertices_per_side: usize,
+    pub height_map: Vec<f32>,
 }
 
 impl Component for TerrainTileComponent {}

@@ -1,19 +1,37 @@
 use crate::{Entity, InputManager, KeyCode, LocalTransformComponent, World};
+use engine::scene::terrain;
 
 pub struct PlayerController {
     pub walk_speed: f32,
     pub run_speed: f32,
     pub turn_speed: f32,
+    pub jump_force: f32,
+    pub gravity_factor: f32,
+    pub height_offset: f32,
     pub active: bool,
+    current_upwards_speed: f32,
+    in_air: bool,
 }
 
 impl PlayerController {
-    pub fn new(walk_speed: f32, run_speed: f32, turn_speed: f32) -> Self {
+    pub fn new(
+        walk_speed: f32,
+        run_speed: f32,
+        turn_speed: f32,
+        jump_force: f32,
+        gravity_factor: f32,
+        height_offset: f32,
+    ) -> Self {
         Self {
             walk_speed,
             run_speed,
             turn_speed,
+            jump_force,
+            gravity_factor,
+            height_offset,
             active: false,
+            current_upwards_speed: 0.0,
+            in_air: false,
         }
     }
 
@@ -61,12 +79,36 @@ impl PlayerController {
 
             local_transform.position += movement.normalize_or_zero() * speed;
 
-            if input.is_key_down(KeyCode::Space) {
-                local_transform.position.y += speed;
+            if input.is_key_pressed(KeyCode::Space) {
+                self.jump();
             }
-            if input.is_key_down(KeyCode::ControlLeft) {
-                local_transform.position.y -= speed;
+
+            self.current_upwards_speed += self.gravity_factor * dt;
+            local_transform.position.y += self.current_upwards_speed * dt;
+        }
+
+        let position = world
+            .get_component::<LocalTransformComponent>(entity)
+            .map(|transform| transform.position);
+
+        if let Some(position) = position {
+            let terrain_height =
+                terrain::get_height_at_point(position.x, position.z, world) - self.height_offset;
+
+            if let Some(transform) = world.get_component_mut::<LocalTransformComponent>(entity) {
+                if transform.position.y < terrain_height {
+                    transform.position.y = terrain_height;
+                    self.in_air = false;
+                    self.current_upwards_speed = 0.0;
+                }
             }
+        }
+    }
+
+    fn jump(&mut self) {
+        if !self.in_air {
+            self.current_upwards_speed = self.jump_force;
+            self.in_air = true;
         }
     }
 }

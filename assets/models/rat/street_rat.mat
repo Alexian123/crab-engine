@@ -8,9 +8,9 @@
     "textures/street_rat_diff_1k.jpg"
   ],
   "params": {
-    "shininess": 0.0,
+    "shininess": 32.0,
     "diffuse_index": 0,
-    "specular_index": null,
+    "specular_index": 0,
     "emission_index": null
   }
 }

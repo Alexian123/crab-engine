@@ -255,12 +255,12 @@ impl Loader {
         vertices_per_side: usize,
         uv_scale: f32,
         height_generator: Option<&HeightGenerator>,
-    ) -> Option<Rc<Mesh>> {
+    ) -> Option<(Rc<Mesh>, Vec<f32>)> {
         match self
             .meshes
             .load_terrain_mesh(size, vertices_per_side, uv_scale, height_generator)
         {
-            Ok(mesh) => Some(mesh),
+            Ok((mesh, height_map)) => Some((mesh, height_map)),
             Err(err) => {
                 tracing::error!("Failed to load terrain mesh: {}", err);
                 None
