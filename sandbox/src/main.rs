@@ -1,4 +1,4 @@
-mod player;
+mod movement;
 
 use engine::GfxContext;
 use engine::loader::Loader;
@@ -8,7 +8,7 @@ use engine::scene::terrain;
 use engine::scene::*;
 use engine::{Application, InputManager, run};
 use glam::{Mat4, Quat, Vec3};
-use player::PlayerController;
+use movement::MovementController;
 use std::path::Path;
 use std::rc::Rc;
 use winit::dpi::PhysicalSize;
@@ -20,9 +20,7 @@ struct Sandbox {
     renderer: Option<Renderer>,
     loader: Option<Loader>,
     scene: Scene,
-    fly_camera: FlyCamera,
-    tp_camera: ThirdPersonCamera,
-    player: PlayerController,
+    movement_ctrl: MovementController,
 }
 
 impl Application for Sandbox {
@@ -233,7 +231,7 @@ impl Application for Sandbox {
             .world_mut()
             .set_component::<NameComponent>(rat, NameComponent("player".to_string()));
 
-        self.scene.update(&self.tp_camera);
+        self.scene.update(self.movement_ctrl.get_active_camera());
 
         tracing::info!("Done.");
     }
@@ -243,55 +241,17 @@ impl Application for Sandbox {
             return true;
         }
 
-        let player_entity = self.scene.find_entity_by_name("player").unwrap();
-        self.player
-            .update(player_entity, dt, input, self.scene.world_mut());
+        let player = self.scene.find_entity_by_name("player").unwrap();
 
-        let world = self.scene.world_mut();
+        self.movement_ctrl
+            .update(dt, input, self.scene.world_mut(), player);
 
-        let player_wt = world
-            .get_component_mut::<WorldTransformComponent>(player_entity)
+        let (_, lighting) = self
+            .scene
+            .world_mut()
+            .query_mut::<LightingComponent>()
+            .next()
             .unwrap();
-        let (_, _, world_pos) = player_wt.model_matrix.to_scale_rotation_translation();
-        self.tp_camera.set_target(Some(world_pos));
-
-        let (_, scroll_offset_y) = input.mouse_wheel();
-        if scroll_offset_y != 0.0 {
-            self.tp_camera.zoom(scroll_offset_y);
-        }
-
-        if input.is_mouse_down(MouseButton::Right) {
-            let delta = input.mouse_delta();
-            let sensitivity = 0.1;
-            self.tp_camera.move_yaw(delta.0 as f32 * sensitivity);
-            self.tp_camera.move_pitch(-delta.1 as f32 * sensitivity);
-        }
-
-        // let camera_speed = if input.is_key_down(KeyCode::ShiftLeft) {
-        //     dt * 100.0
-        // } else {
-        //     dt * 10.0
-        // };
-        // if input.is_key_down(KeyCode::KeyW) {
-        //     self.fly_camera.move_z(camera_speed);
-        // }
-        // if input.is_key_down(KeyCode::KeyS) {
-        //     self.fly_camera.move_z(-camera_speed);
-        // }
-        // if input.is_key_down(KeyCode::KeyA) {
-        //     self.fly_camera.move_x(-camera_speed);
-        // }
-        // if input.is_key_down(KeyCode::KeyD) {
-        //     self.fly_camera.move_x(camera_speed);
-        // }
-        // if input.is_key_down(KeyCode::Space) {
-        //     self.fly_camera.move_y(camera_speed);
-        // }
-        // if input.is_key_down(KeyCode::ControlLeft) {
-        //     self.fly_camera.move_y(-camera_speed);
-        // }
-
-        let (_, lighting) = world.query_mut::<LightingComponent>().next().unwrap();
 
         lighting.lights_mask &= 0xFFFF;
         if input.is_mouse_down(MouseButton::Left) {
@@ -299,11 +259,10 @@ impl Application for Sandbox {
         }
 
         // update spot light position and direction to simulate FPS flashlight
-        lighting.spot_lights[0].pl.position = self.tp_camera.position();
-        lighting.spot_lights[0].direction = self.tp_camera.fly_camera().forward();
+        lighting.spot_lights[0].pl.position = self.movement_ctrl.get_active_camera().position();
+        lighting.spot_lights[0].direction = self.movement_ctrl.get_active_camera().forward();
 
-        //self.scene.update(&self.fly_camera);
-        self.scene.update(&self.tp_camera);
+        self.scene.update(self.movement_ctrl.get_active_camera());
 
         false
     }
@@ -315,7 +274,8 @@ impl Application for Sandbox {
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
         tracing::info!("resized to {width}x{height}");
         gfx.set_viewport(0, 0, width as i32, height as i32);
-        self.fly_camera.set_aspect(width as f32 / height as f32);
+        self.movement_ctrl
+            .set_aspect_ratio(width as f32 / height as f32);
     }
 }
 
@@ -325,9 +285,10 @@ fn main() {
         renderer: None,
         loader: None,
         scene: Scene::new(),
-        fly_camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
-        tp_camera: ThirdPersonCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0, 10.0),
-        player: PlayerController::new(10.0, 100.0),
+        movement_ctrl: MovementController::new(
+            FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
+            ThirdPersonCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0, 10.0),
+        ),
     };
     run("Sandbox", app);
 }

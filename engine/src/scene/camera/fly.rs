@@ -222,4 +222,9 @@ impl Camera for FlyCamera {
     fn forward(&self) -> Vec3 {
         *self.front.borrow()
     }
+
+    fn set_aspect_ratio(&mut self, aspect_ratio: f32) {
+        self.aspect = aspect_ratio;
+        self.projection_dirty.set(true);
+    }
 }

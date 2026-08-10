@@ -22,7 +22,7 @@ impl Scene {
         }
     }
 
-    pub fn update(&mut self, camera: &impl Camera) {
+    pub fn update(&mut self, camera: &dyn Camera) {
         hierarchy::update_world_transforms(&mut self.world);
 
         // update camera component

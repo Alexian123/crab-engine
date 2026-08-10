@@ -12,4 +12,5 @@ pub trait Camera {
     fn up(&self) -> Vec3;
     fn right(&self) -> Vec3;
     fn forward(&self) -> Vec3;
+    fn set_aspect_ratio(&mut self, aspect_ratio: f32);
 }

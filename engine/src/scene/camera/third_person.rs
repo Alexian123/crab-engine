@@ -90,4 +90,8 @@ impl Camera for ThirdPersonCamera {
     fn forward(&self) -> Vec3 {
         self.fly_camera.forward()
     }
+
+    fn set_aspect_ratio(&mut self, aspect_ratio: f32) {
+        self.fly_camera.set_aspect_ratio(aspect_ratio);
+    }
 }

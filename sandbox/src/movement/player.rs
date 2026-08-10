@@ -3,17 +3,25 @@ use crate::{Entity, InputManager, KeyCode, LocalTransformComponent, World};
 pub struct PlayerController {
     pub walk_speed: f32,
     pub run_speed: f32,
+    pub turn_speed: f32,
+    pub active: bool,
 }
 
 impl PlayerController {
-    pub fn new(walk_speed: f32, run_speed: f32) -> Self {
+    pub fn new(walk_speed: f32, run_speed: f32, turn_speed: f32) -> Self {
         Self {
             walk_speed,
             run_speed,
+            turn_speed,
+            active: false,
         }
     }
 
     pub fn update(&mut self, entity: Entity, dt: f32, input: &InputManager, world: &mut World) {
+        if !self.active {
+            return;
+        }
+
         if let Some(local_transform) = world.get_component_mut::<LocalTransformComponent>(entity) {
             let speed = if input.is_key_down(KeyCode::ShiftLeft) {
                 dt * self.run_speed
@@ -21,7 +29,7 @@ impl PlayerController {
                 dt * self.walk_speed
             };
 
-            let turn_speed = 3.0 * dt;
+            let turn_speed = self.turn_speed * dt;
             if input.is_key_down(KeyCode::KeyQ) {
                 local_transform.rotation =
                     glam::Quat::from_rotation_y(turn_speed) * local_transform.rotation;
