@@ -1,0 +1,14 @@
+{
+  "name": "material_0",
+  "shader": {
+    "vertex": "./assets/shaders/static_shader.vert",
+    "fragment": "./assets/shaders/static_shader.frag"
+  },
+  "textures": [],
+  "params": {
+    "shininess": 0.0,
+    "diffuse_index": null,
+    "specular_index": null,
+    "emission_index": null
+  }
+}

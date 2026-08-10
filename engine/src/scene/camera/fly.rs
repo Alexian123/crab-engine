@@ -33,7 +33,7 @@ impl FlyCamera {
             aspect,
             near,
             far,
-            yaw: -90.0, // looking towards negative z-axis
+            yaw: 90.0, // looking towards poz z-axis
             pitch: 0.0,
             position: Vec3::new(0.0, 0.0, 3.0),
             front: RefCell::new(Vec3::new(0.0, 0.0, -1.0)),
@@ -73,18 +73,6 @@ impl FlyCamera {
 
     pub fn pitch(&self) -> f32 {
         self.pitch
-    }
-
-    pub fn front(&self) -> Vec3 {
-        *self.front.borrow()
-    }
-
-    pub fn up(&self) -> Vec3 {
-        *self.up.borrow()
-    }
-
-    pub fn right(&self) -> Vec3 {
-        *self.right.borrow()
     }
 
     pub fn set_position(&mut self, position: Vec3) {
@@ -221,5 +209,17 @@ impl Camera for FlyCamera {
 
     fn position(&self) -> Vec3 {
         self.position
+    }
+
+    fn up(&self) -> Vec3 {
+        *self.up.borrow()
+    }
+
+    fn right(&self) -> Vec3 {
+        *self.right.borrow()
+    }
+
+    fn forward(&self) -> Vec3 {
+        *self.front.borrow()
     }
 }

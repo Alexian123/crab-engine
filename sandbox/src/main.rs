@@ -1,10 +1,14 @@
+mod player;
+
 use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
+use engine::scene::camera::ThirdPersonCamera;
 use engine::scene::terrain;
 use engine::scene::*;
 use engine::{Application, InputManager, run};
-use glam::{Quat, Vec3};
+use glam::{Mat4, Quat, Vec3};
+use player::PlayerController;
 use std::path::Path;
 use std::rc::Rc;
 use winit::dpi::PhysicalSize;
@@ -16,7 +20,9 @@ struct Sandbox {
     renderer: Option<Renderer>,
     loader: Option<Loader>,
     scene: Scene,
-    camera: FlyCamera,
+    fly_camera: FlyCamera,
+    tp_camera: ThirdPersonCamera,
+    player: PlayerController,
 }
 
 impl Application for Sandbox {
@@ -52,22 +58,23 @@ impl Application for Sandbox {
             2,
             -10.0,
             800,
-            1,
+            128,
             10.0,
             Some(terrain_material),
         );
         tracing::info!("Done.");
 
-        tracing::info!("Loading player...");
-
         let world = self.scene.world_mut();
+
+        tracing::info!("Loading camera...");
+
         let camera_entity = world.create_entity();
         world.add_component(
             camera_entity,
             CameraComponent {
-                position: self.camera.position(),
-                view: self.camera.view(),
-                projection: self.camera.projection(),
+                position: Vec3::ZERO,
+                view: Mat4::IDENTITY,
+                projection: Mat4::IDENTITY,
             },
         );
 
@@ -208,6 +215,26 @@ impl Application for Sandbox {
         pug_transform.position = Vec3::new(60.0, 2.0, -18.0);
         pug_transform.scale = Vec3::new(10.0, 10.0, 10.0);
 
+        let rat = loader
+            .load_model(
+                Path::new("./assets/models/rat/street_rat_1k.gltf.model"),
+                &mut self.scene,
+            )
+            .expect("Failed to load rat model");
+        let rat_transform = self
+            .scene
+            .world_mut()
+            .get_component_mut::<LocalTransformComponent>(rat)
+            .unwrap();
+        rat_transform.position = Vec3::new(0.0, 0.0, 0.0);
+        rat_transform.scale = Vec3::new(50.0, 50.0, 50.0);
+
+        self.scene
+            .world_mut()
+            .set_component::<NameComponent>(rat, NameComponent("player".to_string()));
+
+        self.scene.update(&self.tp_camera);
+
         tracing::info!("Done.");
     }
 
@@ -216,56 +243,53 @@ impl Application for Sandbox {
             return true;
         }
 
+        let player_entity = self.scene.find_entity_by_name("player").unwrap();
+        self.player
+            .update(player_entity, dt, input, self.scene.world_mut());
+
         let world = self.scene.world_mut();
+
+        let player_wt = world
+            .get_component_mut::<WorldTransformComponent>(player_entity)
+            .unwrap();
+        let (_, _, world_pos) = player_wt.model_matrix.to_scale_rotation_translation();
+        self.tp_camera.set_target(Some(world_pos));
 
         let (_, scroll_offset_y) = input.mouse_wheel();
         if scroll_offset_y != 0.0 {
-            self.camera.zoom(scroll_offset_y);
+            self.tp_camera.zoom(scroll_offset_y);
         }
 
         if input.is_mouse_down(MouseButton::Right) {
             let delta = input.mouse_delta();
             let sensitivity = 0.1;
-            self.camera.move_yaw(delta.0 as f32 * sensitivity);
-            self.camera.move_pitch(-delta.1 as f32 * sensitivity);
+            self.tp_camera.move_yaw(delta.0 as f32 * sensitivity);
+            self.tp_camera.move_pitch(-delta.1 as f32 * sensitivity);
         }
 
-        let camera_speed = if input.is_key_down(KeyCode::ShiftLeft) {
-            dt * 100.0
-        } else {
-            dt * 10.0
-        };
-        if input.is_key_down(KeyCode::KeyW) {
-            self.camera.move_z(camera_speed);
-        }
-        if input.is_key_down(KeyCode::KeyS) {
-            self.camera.move_z(-camera_speed);
-        }
-        if input.is_key_down(KeyCode::KeyA) {
-            self.camera.move_x(-camera_speed);
-        }
-        if input.is_key_down(KeyCode::KeyD) {
-            self.camera.move_x(camera_speed);
-        }
-        if input.is_key_down(KeyCode::Space) {
-            self.camera.move_y(camera_speed);
-        }
-        if input.is_key_down(KeyCode::ControlLeft) {
-            self.camera.move_y(-camera_speed);
-        }
-
-        // tracing::info!(
-        //     "Camera: x: {}, y: {}, z: {}",
-        //     self.camera.position().x,
-        //     self.camera.position().y,
-        //     self.camera.position().z
-        // );
-
-        // update camera component
-        let (_, camera_comp) = world.query_mut::<CameraComponent>().next().unwrap();
-        camera_comp.position = self.camera.position();
-        camera_comp.view = self.camera.view();
-        camera_comp.projection = self.camera.projection();
+        // let camera_speed = if input.is_key_down(KeyCode::ShiftLeft) {
+        //     dt * 100.0
+        // } else {
+        //     dt * 10.0
+        // };
+        // if input.is_key_down(KeyCode::KeyW) {
+        //     self.fly_camera.move_z(camera_speed);
+        // }
+        // if input.is_key_down(KeyCode::KeyS) {
+        //     self.fly_camera.move_z(-camera_speed);
+        // }
+        // if input.is_key_down(KeyCode::KeyA) {
+        //     self.fly_camera.move_x(-camera_speed);
+        // }
+        // if input.is_key_down(KeyCode::KeyD) {
+        //     self.fly_camera.move_x(camera_speed);
+        // }
+        // if input.is_key_down(KeyCode::Space) {
+        //     self.fly_camera.move_y(camera_speed);
+        // }
+        // if input.is_key_down(KeyCode::ControlLeft) {
+        //     self.fly_camera.move_y(-camera_speed);
+        // }
 
         let (_, lighting) = world.query_mut::<LightingComponent>().next().unwrap();
 
@@ -275,10 +299,11 @@ impl Application for Sandbox {
         }
 
         // update spot light position and direction to simulate FPS flashlight
-        lighting.spot_lights[0].pl.position = self.camera.position();
-        lighting.spot_lights[0].direction = self.camera.front();
+        lighting.spot_lights[0].pl.position = self.tp_camera.position();
+        lighting.spot_lights[0].direction = self.tp_camera.fly_camera().forward();
 
-        self.scene.update();
+        //self.scene.update(&self.fly_camera);
+        self.scene.update(&self.tp_camera);
 
         false
     }
@@ -290,7 +315,7 @@ impl Application for Sandbox {
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
         tracing::info!("resized to {width}x{height}");
         gfx.set_viewport(0, 0, width as i32, height as i32);
-        self.camera.set_aspect(width as f32 / height as f32);
+        self.fly_camera.set_aspect(width as f32 / height as f32);
     }
 }
 
@@ -300,7 +325,9 @@ fn main() {
         renderer: None,
         loader: None,
         scene: Scene::new(),
-        camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
+        fly_camera: FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
+        tp_camera: ThirdPersonCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0, 10.0),
+        player: PlayerController::new(10.0, 100.0),
     };
     run("Sandbox", app);
 }

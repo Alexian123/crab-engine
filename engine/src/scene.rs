@@ -22,8 +22,15 @@ impl Scene {
         }
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, camera: &impl Camera) {
         hierarchy::update_world_transforms(&mut self.world);
+
+        // update camera component
+        if let Some((_, camera_comp)) = self.world.query_mut::<CameraComponent>().next() {
+            camera_comp.position = camera.position();
+            camera_comp.view = camera.view();
+            camera_comp.projection = camera.projection();
+        }
     }
 
     pub fn world(&self) -> &World {
