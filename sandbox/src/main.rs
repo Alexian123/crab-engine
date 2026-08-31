@@ -36,6 +36,9 @@ impl Application for Sandbox {
 
         gfx.set_clear_color(0.1, 0.1, 0.15, 1.0);
         gfx.set_depth_test(true);
+        gfx.set_cull_face_back();
+        gfx.set_front_face_ccw();
+        gfx.set_face_culling(true);
 
         self.renderer = Some(Renderer::new(Rc::clone(gfx)));
         self.loader = Some(Loader::new(Rc::clone(gfx)));
@@ -81,7 +84,9 @@ impl Application for Sandbox {
 
         tracing::info!("Loading primitive models...");
 
-        let cube_mesh = loader.load_cube_mesh().unwrap();
+        let cube_mesh = loader
+            .load_mesh(Path::new("./assets/models//Cube.mesh"))
+            .unwrap();
 
         let crate_material = loader
             .load_material(Path::new("./assets/materials/crate.mat"), None)

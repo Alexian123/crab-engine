@@ -14,7 +14,7 @@ pub struct MovementController {
 impl MovementController {
     pub fn new(fly_camera: FlyCamera, tp_camera: ThirdPersonCamera) -> Self {
         let mut ctrl = Self {
-            fly_camera_ctrl: FlyCameraController::new(fly_camera, 0.1, 10.0, 100.0),
+            fly_camera_ctrl: FlyCameraController::new(fly_camera, 0.5, 10.0, 100.0),
             tp_camera_ctrl: TPCameraController::new(tp_camera, 0.1),
             player_ctrl: PlayerController::new(10.0, 100.0, 3.0, 20.0, -50.0, 10.0),
         };

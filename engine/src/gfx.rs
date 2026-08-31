@@ -39,6 +39,40 @@ impl GfxContext {
         }
     }
 
+    pub fn set_face_culling(&self, enabled: bool) {
+        unsafe {
+            if enabled {
+                self.gl.enable(glow::CULL_FACE);
+            } else {
+                self.gl.disable(glow::CULL_FACE);
+            }
+        }
+    }
+
+    pub fn set_front_face_ccw(&self) {
+        unsafe {
+            self.gl.front_face(glow::CCW);
+        }
+    }
+
+    pub fn set_front_face_cw(&self) {
+        unsafe {
+            self.gl.front_face(glow::CW);
+        }
+    }
+
+    pub fn set_cull_face_back(&self) {
+        unsafe {
+            self.gl.cull_face(glow::BACK);
+        }
+    }
+
+    pub fn set_cull_face_front(&self) {
+        unsafe {
+            self.gl.cull_face(glow::FRONT);
+        }
+    }
+
     pub fn set_viewport(&self, x: i32, y: i32, width: i32, height: i32) {
         unsafe {
             self.gl.viewport(x, y, width, height);

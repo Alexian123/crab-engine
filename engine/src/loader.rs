@@ -239,16 +239,6 @@ impl Loader {
         }
     }
 
-    pub fn load_cube_mesh(&mut self) -> Option<Rc<Mesh>> {
-        match self.meshes.load_cube() {
-            Ok(mesh) => Some(mesh),
-            Err(err) => {
-                tracing::error!("Failed to load cube mesh primitve: {}", err);
-                None
-            }
-        }
-    }
-
     pub fn load_terrain_mesh(
         &mut self,
         size: usize,
