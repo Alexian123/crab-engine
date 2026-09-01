@@ -229,6 +229,16 @@ impl Loader {
         }
     }
 
+    pub fn load_quad(&mut self) -> Option<Rc<Mesh>> {
+        match self.meshes.load_quad() {
+            Ok(mesh) => Some(mesh),
+            Err(err) => {
+                tracing::error!("Failed to load quad: {}", err);
+                None
+            }
+        }
+    }
+
     pub fn load_mesh(&mut self, path: &Path) -> Option<Rc<Mesh>> {
         match self.meshes.load(path) {
             Ok(mesh) => Some(mesh),

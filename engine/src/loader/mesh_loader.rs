@@ -34,6 +34,55 @@ impl MeshLoader {
         }
     }
 
+    pub fn load_quad(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
+        let path = PathBuf::from("quad.mesh");
+
+        if let Some(mesh) = self.cache.get(&path) {
+            return Ok(Rc::clone(mesh));
+        }
+
+        const POSITIONS: &[f32] = &[
+            -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0,
+        ];
+        const TEXTURE_COORDS: &[f32] =
+            &[0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0];
+
+        let mut vertices = Vec::with_capacity(6 * 2);
+        for i in 0..6 {
+            vertices.push(POSITIONS[i * 2 + 0]);
+            vertices.push(POSITIONS[i * 2 + 1]);
+            vertices.push(TEXTURE_COORDS[i * 2 + 0]);
+            vertices.push(TEXTURE_COORDS[i * 2 + 1]);
+        }
+
+        let layout = VertexLayout {
+            attribs: vec![
+                VertexAttribute {
+                    location: 0,
+                    count: 2,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 0,
+                },
+                VertexAttribute {
+                    location: 1,
+                    count: 2,
+                    format: VertexFormat::Float32,
+                    normalized: false,
+                    offset: 2 * std::mem::size_of::<f32>(),
+                },
+            ],
+        };
+
+        let mesh = Rc::new(
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], &layout)
+                .map_err(MeshLoadError::InvalidMesh)?,
+        );
+
+        self.cache.insert(path, Rc::clone(&mesh));
+        Ok(mesh)
+    }
+
     pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Rc<Mesh>, MeshLoadError> {
         let path = std::fs::canonicalize(path.as_ref())?;
 

@@ -85,6 +85,117 @@ impl GfxContext {
         }
     }
 
+    pub fn create_fbo(&self) -> Result<FrameBufferObject, String> {
+        let fbo = unsafe { self.gl.create_framebuffer()? };
+        Ok(FrameBufferObject { internal_fbo: fbo })
+    }
+
+    pub fn delete_fbo(&self, fbo: &FrameBufferObject) {
+        unsafe {
+            self.gl.delete_framebuffer(fbo.internal_fbo);
+        }
+    }
+
+    pub fn is_fbo_complete(&self) -> bool {
+        unsafe { self.gl.check_framebuffer_status(glow::FRAMEBUFFER) == glow::FRAMEBUFFER_COMPLETE }
+    }
+
+    pub fn bind_fbo(&self, fbo: Option<&FrameBufferObject>) {
+        unsafe {
+            self.gl
+                .bind_framebuffer(glow::FRAMEBUFFER, fbo.map(|f| f.internal_fbo));
+        }
+    }
+
+    pub fn framebuffer_texture_2d(
+        &self,
+        attachment: FrameBufferTextureAttachment,
+        texture_target: TextureTarget,
+        texture: Option<&TextureObject>,
+        level: i32,
+    ) {
+        unsafe {
+            self.gl.framebuffer_texture_2d(
+                glow::FRAMEBUFFER,
+                self.get_framebuffer_texture_attachment_u32(attachment),
+                self.get_texture_target_u32(texture_target),
+                texture.map(|t| t.internal_texture),
+                level,
+            );
+        }
+    }
+
+    fn get_framebuffer_texture_attachment_u32(
+        &self,
+        attachment: FrameBufferTextureAttachment,
+    ) -> u32 {
+        match attachment {
+            FrameBufferTextureAttachment::Color => glow::COLOR_ATTACHMENT0,
+            FrameBufferTextureAttachment::Depth => glow::DEPTH_ATTACHMENT,
+            FrameBufferTextureAttachment::Stencil => glow::STENCIL_ATTACHMENT,
+            FrameBufferTextureAttachment::DepthStencil => glow::DEPTH_STENCIL_ATTACHMENT,
+        }
+    }
+
+    pub fn framebuffer_renderbuffer(
+        &self,
+        attachment: FrameBufferRenderBufferAttachment,
+        rbo: Option<&RenderBufferObject>,
+    ) {
+        unsafe {
+            self.gl.framebuffer_renderbuffer(
+                glow::FRAMEBUFFER,
+                self.get_framebuffer_renderbuffer_attachment_u32(attachment),
+                glow::RENDERBUFFER,
+                rbo.map(|r| r.internal_rbo),
+            );
+        }
+    }
+
+    fn get_framebuffer_renderbuffer_attachment_u32(
+        &self,
+        attachment: FrameBufferRenderBufferAttachment,
+    ) -> u32 {
+        match attachment {
+            FrameBufferRenderBufferAttachment::DepthStencil => glow::DEPTH_STENCIL_ATTACHMENT,
+        }
+    }
+
+    pub fn create_rbo(&self) -> Result<RenderBufferObject, String> {
+        let rbo = unsafe { self.gl.create_renderbuffer()? };
+        Ok(RenderBufferObject { internal_rbo: rbo })
+    }
+
+    pub fn delete_rbo(&self, rbo: &RenderBufferObject) {
+        unsafe {
+            self.gl.delete_renderbuffer(rbo.internal_rbo);
+        }
+    }
+
+    pub fn bind_rbo(&self, rbo: Option<&RenderBufferObject>) {
+        unsafe {
+            self.gl
+                .bind_renderbuffer(glow::RENDERBUFFER, rbo.map(|r| r.internal_rbo));
+        }
+    }
+
+    pub fn render_buffer_storage(&self, format: RenderBufferFormat, width: u32, height: u32) {
+        unsafe {
+            self.gl.renderbuffer_storage(
+                glow::RENDERBUFFER,
+                self.get_renderbuffer_format_u32(format),
+                width as i32,
+                height as i32,
+            );
+        }
+    }
+
+    fn get_renderbuffer_format_u32(&self, format: RenderBufferFormat) -> u32 {
+        match format {
+            RenderBufferFormat::Depth24Stencil8 => glow::DEPTH24_STENCIL8,
+        }
+    }
+
     pub fn create_vao(&self) -> Result<VertexArrayObject, String> {
         let vao = unsafe { self.gl.create_vertex_array()? };
         Ok(VertexArrayObject { internal_vao: vao })
@@ -102,20 +213,20 @@ impl GfxContext {
         }
     }
 
-    pub fn create_buffer(&self) -> Result<BufferObject, String> {
+    pub fn create_buffer(&self) -> Result<VertexBufferObject, String> {
         let buffer = unsafe { self.gl.create_buffer()? };
-        Ok(BufferObject {
+        Ok(VertexBufferObject {
             internal_buffer: buffer,
         })
     }
 
-    pub fn delete_buffer(&self, buffer: &BufferObject) {
+    pub fn delete_buffer(&self, buffer: &VertexBufferObject) {
         unsafe {
             self.gl.delete_buffer(buffer.internal_buffer);
         }
     }
 
-    pub fn bind_buffer(&self, target: BufferTarget, buffer: Option<&BufferObject>) {
+    pub fn bind_buffer(&self, target: VertexBufferTarget, buffer: Option<&VertexBufferObject>) {
         unsafe {
             self.gl.bind_buffer(
                 self.get_target_u32(target),
@@ -124,14 +235,19 @@ impl GfxContext {
         }
     }
 
-    fn get_target_u32(&self, target: BufferTarget) -> u32 {
+    fn get_target_u32(&self, target: VertexBufferTarget) -> u32 {
         match target {
-            BufferTarget::Array => glow::ARRAY_BUFFER,
-            BufferTarget::Element => glow::ELEMENT_ARRAY_BUFFER,
+            VertexBufferTarget::Array => glow::ARRAY_BUFFER,
+            VertexBufferTarget::Element => glow::ELEMENT_ARRAY_BUFFER,
         }
     }
 
-    pub fn set_buffer_data_u8(&self, target: BufferTarget, usage: BufferDataUsage, data: &[u8]) {
+    pub fn set_buffer_data_u8(
+        &self,
+        target: VertexBufferTarget,
+        usage: VertexBufferDataUsage,
+        data: &[u8],
+    ) {
         unsafe {
             self.gl.buffer_data_u8_slice(
                 self.get_target_u32(target),
@@ -141,10 +257,10 @@ impl GfxContext {
         }
     }
 
-    fn get_usage_u32(&self, usage: BufferDataUsage) -> u32 {
+    fn get_usage_u32(&self, usage: VertexBufferDataUsage) -> u32 {
         match usage {
-            BufferDataUsage::StaticDraw => glow::STATIC_DRAW,
-            BufferDataUsage::DynamicDraw => glow::DYNAMIC_DRAW,
+            VertexBufferDataUsage::StaticDraw => glow::STATIC_DRAW,
+            VertexBufferDataUsage::DynamicDraw => glow::DYNAMIC_DRAW,
         }
     }
 
@@ -237,7 +353,7 @@ impl GfxContext {
         }
     }
 
-    pub fn set_tex_image_2d(
+    pub fn tex_image_2d(
         &self,
         target: TextureTarget,
         level: i32,
@@ -246,6 +362,7 @@ impl GfxContext {
         height: i32,
         border: i32,
         format: TextureFormat,
+        data_type: TextureDataType,
         pixels: Option<&[u8]>,
     ) {
         unsafe {
@@ -257,7 +374,7 @@ impl GfxContext {
                 height,
                 border,
                 self.get_texture_format_u32(format),
-                glow::UNSIGNED_BYTE,
+                self.get_texture_data_type_u32(data_type),
                 pixels,
             );
         }
@@ -269,6 +386,17 @@ impl GfxContext {
             TextureFormat::RG => glow::RG,
             TextureFormat::RGB => glow::RGB,
             TextureFormat::RGBA => glow::RGBA,
+            TextureFormat::DepthComponent => glow::DEPTH_COMPONENT,
+            TextureFormat::StencilIndex => glow::STENCIL_INDEX,
+            TextureFormat::Depth24Stencil8 => glow::DEPTH24_STENCIL8,
+            TextureFormat::DepthStencil => glow::UNSIGNED_INT_24_8,
+        }
+    }
+
+    fn get_texture_data_type_u32(&self, data_type: TextureDataType) -> u32 {
+        match data_type {
+            TextureDataType::UnsignedByte => glow::UNSIGNED_BYTE,
+            TextureDataType::UnsignedInt24_8 => glow::UNSIGNED_INT_24_8,
         }
     }
 

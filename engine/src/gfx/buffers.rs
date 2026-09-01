@@ -2,18 +2,41 @@ pub struct VertexArrayObject {
     pub(super) internal_vao: glow::VertexArray,
 }
 
-pub enum BufferTarget {
+pub struct FrameBufferObject {
+    pub(super) internal_fbo: glow::Framebuffer,
+}
+
+pub enum FrameBufferTextureAttachment {
+    Color,
+    Depth,
+    Stencil,
+    DepthStencil,
+}
+
+pub enum FrameBufferRenderBufferAttachment {
+    DepthStencil,
+}
+
+pub enum VertexBufferTarget {
     Array,
     Element,
 }
 
-pub enum BufferDataUsage {
+pub enum VertexBufferDataUsage {
     StaticDraw,
     DynamicDraw,
 }
 
-pub struct BufferObject {
+pub struct VertexBufferObject {
     pub(super) internal_buffer: glow::Buffer,
+}
+
+pub struct RenderBufferObject {
+    pub(super) internal_rbo: glow::Renderbuffer,
+}
+
+pub enum RenderBufferFormat {
+    Depth24Stencil8,
 }
 
 pub enum TextureTarget {
@@ -26,6 +49,15 @@ pub enum TextureFormat {
     RG,
     RGB,
     RGBA,
+    DepthComponent,
+    StencilIndex,
+    Depth24Stencil8,
+    DepthStencil,
+}
+
+pub enum TextureDataType {
+    UnsignedByte,
+    UnsignedInt24_8,
 }
 
 pub enum TextureWrapMode {

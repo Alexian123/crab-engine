@@ -17,18 +17,30 @@ use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
 use winit::window::{CursorGrabMode, Window};
 
+const WINDOW_WIDTH: u32 = 1280;
+const WINDOW_HEIGHT: u32 = 720;
+
+struct FrameBufferData {
+    shader: Rc<engine::renderer::ShaderProgram>,
+    screen_quad: Rc<engine::renderer::Mesh>,
+    fbo: engine::gfx::buffers::FrameBufferObject,
+    texture_attachment: engine::gfx::buffers::TextureObject,
+    rbo: engine::gfx::buffers::RenderBufferObject,
+}
+
 struct Sandbox {
     renderer: Option<Renderer>,
     loader: Option<Loader>,
     scene: Scene,
     movement_ctrl: MovementController,
+    frame_buffer_data: Option<FrameBufferData>,
 }
 
 impl Application for Sandbox {
     fn init(&mut self, window: &Window, gfx: &Rc<GfxContext>) {
         tracing::info!("Sandbox initialization started");
 
-        let _ = window.request_inner_size(PhysicalSize::new(1280, 720));
+        let _ = window.request_inner_size(PhysicalSize::new(WINDOW_WIDTH, 720));
         window
             .set_cursor_grab(CursorGrabMode::Locked)
             .expect("Failed to grab cursor");
@@ -46,6 +58,79 @@ impl Application for Sandbox {
         tracing::info!("Scene initialization started");
 
         let loader = self.loader.as_mut().unwrap();
+
+        // create postprocessing shader
+        let pp_shader = loader
+            .load_shader(
+                Path::new("./assets/shaders/postprocessing/pp.vert"),
+                Path::new("./assets/shaders/postprocessing/pp.frag"),
+            )
+            .expect("Failed to load postprocessing shader");
+        pp_shader.bind();
+        pp_shader.set_uniform("uScreenTexture", &(0 as i32));
+
+        // create screen quad mesh
+        let screen_quad = loader.load_quad().expect("Failed to load screen quad mesh");
+
+        // create FBO
+        let fbo = gfx.create_fbo().expect("Failed to create FBO");
+        gfx.bind_fbo(Some(&fbo));
+
+        // create color texture attachment
+        use engine::gfx::buffers::{
+            FrameBufferRenderBufferAttachment, FrameBufferTextureAttachment, RenderBufferFormat,
+            TextureDataType, TextureFilterMode, TextureFormat, TextureTarget,
+        };
+        let texture_attachment = gfx
+            .create_texture_object()
+            .expect("Failed to create texture attachment");
+        gfx.bind_texture(TextureTarget::Texture2D, Some(&texture_attachment));
+        gfx.tex_image_2d(
+            TextureTarget::Texture2D,
+            0,
+            TextureFormat::RGB,
+            WINDOW_WIDTH as i32,
+            WINDOW_HEIGHT as i32,
+            0,
+            TextureFormat::RGB,
+            TextureDataType::UnsignedByte,
+            None,
+        );
+        gfx.set_texture_min_mag_filter(
+            TextureTarget::Texture2D,
+            Some(TextureFilterMode::Linear),
+            Some(TextureFilterMode::Linear),
+        );
+        gfx.framebuffer_texture_2d(
+            FrameBufferTextureAttachment::Color,
+            TextureTarget::Texture2D,
+            Some(&texture_attachment),
+            0,
+        );
+
+        // create a renderbuffer object for depth and stencil attachment
+        let rbo = gfx.create_rbo().expect("Failed to create RBO");
+        gfx.bind_rbo(Some(&rbo));
+        gfx.render_buffer_storage(
+            RenderBufferFormat::Depth24Stencil8,
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+        );
+        gfx.framebuffer_renderbuffer(FrameBufferRenderBufferAttachment::DepthStencil, Some(&rbo));
+
+        // check if the framebuffer is complete
+        if !gfx.is_fbo_complete() {
+            tracing::error!("Framebuffer is not complete");
+        }
+        gfx.bind_fbo(None);
+
+        self.frame_buffer_data = Some(FrameBufferData {
+            shader: pp_shader,
+            screen_quad: screen_quad,
+            fbo: fbo,
+            texture_attachment: texture_attachment,
+            rbo: rbo,
+        });
 
         tracing::info!("Loading terrain...");
 
@@ -297,8 +382,28 @@ impl Application for Sandbox {
         false
     }
 
-    fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {
+    fn render(&mut self, _window: &Window, gfx: &Rc<GfxContext>) {
+        let fbo_data = self.frame_buffer_data.as_ref().unwrap();
+
+        // bind to post-processing FBO
+        gfx.bind_fbo(Some(&fbo_data.fbo));
+        gfx.set_depth_test(true);
+
+        // render scene to FBO
         self.renderer.as_ref().unwrap().render(&self.scene);
+
+        // do post-processing
+        gfx.bind_fbo(None);
+        gfx.set_depth_test(false);
+        gfx.clear(engine::gfx::GfxContext::COLOR_BUFFER_BIT);
+        fbo_data.shader.bind();
+        fbo_data.screen_quad.bind();
+        gfx.set_active_texture(0);
+        gfx.bind_texture(
+            engine::gfx::buffers::TextureTarget::Texture2D,
+            Some(&fbo_data.texture_attachment),
+        );
+        fbo_data.screen_quad.draw();
     }
 
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
@@ -316,9 +421,21 @@ fn main() {
         loader: None,
         scene: Scene::new(),
         movement_ctrl: MovementController::new(
-            FlyCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0),
-            ThirdPersonCamera::new(45.0, 1280.0 / 720.0, 0.1, 1000.0, 10.0),
+            FlyCamera::new(
+                45.0,
+                WINDOW_WIDTH as f32 / WINDOW_HEIGHT as f32,
+                0.1,
+                1000.0,
+            ),
+            ThirdPersonCamera::new(
+                45.0,
+                WINDOW_WIDTH as f32 / WINDOW_HEIGHT as f32,
+                0.1,
+                1000.0,
+                10.0,
+            ),
         ),
+        frame_buffer_data: None,
     };
     run("Sandbox", app);
 }

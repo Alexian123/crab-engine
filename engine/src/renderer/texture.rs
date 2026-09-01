@@ -1,6 +1,7 @@
 use crate::GfxContext;
 use crate::gfx::buffers::{
-    TextureFilterMode, TextureFormat, TextureObject, TextureTarget, TextureWrapMode,
+    TextureDataType, TextureFilterMode, TextureFormat, TextureObject, TextureTarget,
+    TextureWrapMode,
 };
 use std::rc::Rc;
 
@@ -31,7 +32,7 @@ impl Texture {
         };
         gfx.bind_texture(TextureTarget::Texture2D, Some(&texture));
 
-        gfx.set_tex_image_2d(
+        gfx.tex_image_2d(
             TextureTarget::Texture2D,
             0,
             internal_format,
@@ -39,6 +40,7 @@ impl Texture {
             height as i32,
             0,
             format,
+            TextureDataType::UnsignedByte,
             Some(data),
         );
 

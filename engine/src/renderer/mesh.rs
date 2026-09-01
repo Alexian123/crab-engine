@@ -1,13 +1,15 @@
 use crate::GfxContext;
-use crate::gfx::buffers::{BufferDataUsage, BufferObject, BufferTarget, VertexArrayObject};
+use crate::gfx::buffers::{
+    VertexArrayObject, VertexBufferDataUsage, VertexBufferObject, VertexBufferTarget,
+};
 use crate::gfx::{DrawMode, vertex::*};
 use std::rc::Rc;
 
 pub struct Mesh {
     gfx: Rc<GfxContext>,
     vao: VertexArrayObject,
-    vbo: BufferObject,
-    ebo: Option<BufferObject>,
+    vbo: VertexBufferObject,
+    ebo: Option<VertexBufferObject>,
     vertex_count: usize,
     index_count: usize,
 }
@@ -30,17 +32,17 @@ impl Mesh {
 
         // Bind VBO and EBO to VAO
         gfx.bind_vao(Some(&vao));
-        gfx.bind_buffer(BufferTarget::Array, Some(&vbo));
+        gfx.bind_buffer(VertexBufferTarget::Array, Some(&vbo));
         gfx.set_buffer_data_u8(
-            BufferTarget::Array,
-            BufferDataUsage::StaticDraw,
+            VertexBufferTarget::Array,
+            VertexBufferDataUsage::StaticDraw,
             bytemuck::cast_slice(vertices),
         );
         if let Some(ebo) = &ebo {
-            gfx.bind_buffer(BufferTarget::Element, Some(ebo));
+            gfx.bind_buffer(VertexBufferTarget::Element, Some(ebo));
             gfx.set_buffer_data_u8(
-                BufferTarget::Element,
-                BufferDataUsage::StaticDraw,
+                VertexBufferTarget::Element,
+                VertexBufferDataUsage::StaticDraw,
                 bytemuck::cast_slice(indices),
             );
         }
