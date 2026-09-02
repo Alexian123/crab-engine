@@ -268,6 +268,16 @@ impl Loader {
         }
     }
 
+    pub fn load_textured_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
+        match self.shaders.load_textured_quad_shader() {
+            Ok(shader) => Some(shader),
+            Err(err) => {
+                tracing::error!("Failed to load shader: {}", err);
+                None
+            }
+        }
+    }
+
     pub fn load_shader(&mut self, vertex: &Path, fragment: &Path) -> Option<Rc<ShaderProgram>> {
         match self.shaders.load(vertex, fragment) {
             Ok(shader) => Some(shader),
@@ -278,7 +288,7 @@ impl Loader {
         }
     }
 
-    pub fn load_texture(&mut self, path: &Path) -> Option<Rc<Texture>> {
+    pub fn load_texture(&mut self, path: &Path) -> Option<Rc<MeshTextureSampler2D>> {
         match self.textures.load(path) {
             Ok(texture) => Some(texture),
             Err(err) => {

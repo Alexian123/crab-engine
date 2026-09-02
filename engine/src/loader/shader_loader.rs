@@ -37,6 +37,49 @@ impl ShaderLoader {
         }
     }
 
+    pub fn load_textured_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
+        let vert_path = PathBuf::from("textured_quad.vert");
+        let frag_path = PathBuf::from("textured_quad.frag");
+        let key = ShaderKey {
+            vertex: vert_path,
+            fragment: frag_path,
+        };
+
+        if let Some(shader) = self.cache.get(&key) {
+            return Ok(Rc::clone(shader));
+        }
+
+        let vertex_source = "
+            #version 330 core
+            layout(location = 0) in vec2 aPos;
+            layout(location = 1) in vec2 aUV;
+            out vec2 vUV;
+            void main(void) {
+               	gl_Position = vec4(aPos, 0.0, 1.0);
+               	vUV = aUV;
+            }
+        ";
+
+        let fragment_source = "
+            #version 330 core
+            in vec2 vUV;
+            out vec4 FragColor;
+            uniform sampler2D uColorTexture;
+            void main(void) {
+                FragColor = texture(uColorTexture, vUV);
+            }
+        ";
+
+        let shader = Rc::new(
+            ShaderProgram::new(Rc::clone(&self.gfx), &vertex_source, &fragment_source)
+                .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
+        );
+
+        self.cache.insert(key, Rc::clone(&shader));
+
+        Ok(shader)
+    }
+
     pub fn load<P1, P2>(
         &mut self,
         vert_path: P1,

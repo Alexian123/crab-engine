@@ -1,5 +1,5 @@
 use crate::GfxContext;
-pub use crate::renderer::Texture;
+pub use crate::renderer::MeshTextureSampler2D;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -19,7 +19,7 @@ pub enum TextureLoadError {
 
 pub struct TextureLoader {
     gfx: Rc<GfxContext>,
-    cache: HashMap<PathBuf, Rc<Texture>>,
+    cache: HashMap<PathBuf, Rc<MeshTextureSampler2D>>,
 }
 
 impl TextureLoader {
@@ -30,7 +30,10 @@ impl TextureLoader {
         }
     }
 
-    pub fn load<P: AsRef<Path>>(&mut self, path: P) -> Result<Rc<Texture>, TextureLoadError> {
+    pub fn load<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+    ) -> Result<Rc<MeshTextureSampler2D>, TextureLoadError> {
         let path = std::fs::canonicalize(path.as_ref())?;
 
         if let Some(texture) = self.cache.get(&path) {
@@ -46,7 +49,7 @@ impl TextureLoader {
         let data = image.into_raw();
 
         let texture = Rc::new(
-            Texture::new(Rc::clone(&self.gfx), width, height, 4, &data)
+            MeshTextureSampler2D::new(Rc::clone(&self.gfx), width, height, 4, &data)
                 .map_err(TextureLoadError::TextureCreate)?,
         );
 

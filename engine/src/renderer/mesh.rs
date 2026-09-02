@@ -19,7 +19,7 @@ impl Mesh {
         gfx: Rc<GfxContext>,
         vertices: &[f32],
         indices: &[u32],
-        layout: &VertexLayout,
+        layout: VertexLayout,
     ) -> Result<Self, String> {
         // Create VAO, VBO, and EBO
         let vao = gfx.create_vao()?;

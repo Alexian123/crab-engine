@@ -132,8 +132,6 @@ impl GfxContext {
         match attachment {
             FrameBufferTextureAttachment::Color => glow::COLOR_ATTACHMENT0,
             FrameBufferTextureAttachment::Depth => glow::DEPTH_ATTACHMENT,
-            FrameBufferTextureAttachment::Stencil => glow::STENCIL_ATTACHMENT,
-            FrameBufferTextureAttachment::DepthStencil => glow::DEPTH_STENCIL_ATTACHMENT,
         }
     }
 
@@ -157,7 +155,7 @@ impl GfxContext {
         attachment: FrameBufferRenderBufferAttachment,
     ) -> u32 {
         match attachment {
-            FrameBufferRenderBufferAttachment::DepthStencil => glow::DEPTH_STENCIL_ATTACHMENT,
+            FrameBufferRenderBufferAttachment::Depth => glow::DEPTH_ATTACHMENT,
         }
     }
 
@@ -192,7 +190,7 @@ impl GfxContext {
 
     fn get_renderbuffer_format_u32(&self, format: RenderBufferFormat) -> u32 {
         match format {
-            RenderBufferFormat::Depth24Stencil8 => glow::DEPTH24_STENCIL8,
+            RenderBufferFormat::DepthComponent24 => glow::DEPTH_COMPONENT24,
         }
     }
 
@@ -267,6 +265,12 @@ impl GfxContext {
     pub fn enable_vertex_attrib_array(&self, index: u32) {
         unsafe {
             self.gl.enable_vertex_attrib_array(index);
+        }
+    }
+
+    pub fn disable_vertex_attrib_array(&self, index: u32) {
+        unsafe {
+            self.gl.disable_vertex_attrib_array(index);
         }
     }
 
@@ -386,17 +390,16 @@ impl GfxContext {
             TextureFormat::RG => glow::RG,
             TextureFormat::RGB => glow::RGB,
             TextureFormat::RGBA => glow::RGBA,
+            TextureFormat::RGBA8 => glow::RGBA8,
             TextureFormat::DepthComponent => glow::DEPTH_COMPONENT,
-            TextureFormat::StencilIndex => glow::STENCIL_INDEX,
-            TextureFormat::Depth24Stencil8 => glow::DEPTH24_STENCIL8,
-            TextureFormat::DepthStencil => glow::UNSIGNED_INT_24_8,
+            TextureFormat::DepthComponent24 => glow::DEPTH_COMPONENT24,
         }
     }
 
     fn get_texture_data_type_u32(&self, data_type: TextureDataType) -> u32 {
         match data_type {
             TextureDataType::UnsignedByte => glow::UNSIGNED_BYTE,
-            TextureDataType::UnsignedInt24_8 => glow::UNSIGNED_INT_24_8,
+            TextureDataType::UnsignedInt => glow::UNSIGNED_INT,
         }
     }
 

@@ -75,7 +75,7 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], &layout)
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], layout)
                 .map_err(MeshLoadError::InvalidMesh)?,
         );
 
@@ -137,7 +137,7 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &mesh_data.indices, &layout)
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &mesh_data.indices, layout)
                 .map_err(MeshLoadError::InvalidMesh)?,
         );
 
@@ -259,7 +259,7 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &indices, &layout)
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &indices, layout)
                 .map_err(MeshLoadError::InvalidMesh)?,
         );
 

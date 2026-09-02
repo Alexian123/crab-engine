@@ -5,7 +5,7 @@ use crate::gfx::buffers::{
 };
 use std::rc::Rc;
 
-pub struct Texture {
+pub struct MeshTextureSampler2D {
     gfx: Rc<GfxContext>,
     texture: TextureObject,
     width: u32,
@@ -13,7 +13,7 @@ pub struct Texture {
     channels: u32,
 }
 
-impl Texture {
+impl MeshTextureSampler2D {
     pub fn new(
         gfx: Rc<GfxContext>,
         width: u32,
@@ -91,7 +91,7 @@ impl Texture {
     }
 }
 
-impl Drop for Texture {
+impl Drop for MeshTextureSampler2D {
     fn drop(&mut self) {
         self.gfx.delete_texture_object(&self.texture);
     }

@@ -1,27 +1,65 @@
+pub mod framebuffer;
 pub mod material;
 pub mod mesh;
+pub mod postprocessing;
 pub mod shader;
 pub mod texture;
 pub mod uniform;
 
 use crate::GfxContext;
 use crate::scene::*;
+pub use framebuffer::{Framebuffer, FramebufferBuilder};
 pub use material::Material;
 pub use mesh::Mesh;
+pub use postprocessing::PostProcessingStage;
+use postprocessing::*;
 pub use shader::ShaderProgram;
 use std::rc::Rc;
-pub use texture::Texture;
+pub use texture::MeshTextureSampler2D;
 
 pub struct Renderer {
     gfx: Rc<GfxContext>,
+    framebuffer: Framebuffer,
+    pp_pipeline: PostProcessingPipeline,
 }
 
 impl Renderer {
-    pub fn new(gfx: Rc<GfxContext>) -> Self {
-        Self { gfx }
+    pub fn new(
+        gfx: Rc<GfxContext>,
+        screen_width: u32,
+        screen_height: u32,
+        screen_quad: Rc<Mesh>,
+        screen_shader: Rc<ShaderProgram>,
+    ) -> Result<Self, String> {
+        let framebuffer = FramebufferBuilder::new(Rc::clone(&gfx), screen_width, screen_height)?
+            .with_color_texture()?
+            .with_depth_render_buffer()?
+            .build()?;
+        let pp_pipeline = PostProcessingPipeline::new(Rc::clone(&gfx), screen_quad, screen_shader);
+        Ok(Self {
+            gfx,
+            framebuffer,
+            pp_pipeline,
+        })
+    }
+
+    pub fn add_post_processing_stage(&mut self, stage: Box<dyn PostProcessingStage>) {
+        self.pp_pipeline.stages.push(stage);
+    }
+
+    pub fn clear_post_processing_stages(&mut self) {
+        self.pp_pipeline.stages.clear();
     }
 
     pub fn render(&self, scene: &Scene) {
+        self.framebuffer.bind();
+        self.render_scene(scene);
+        self.framebuffer.unbind();
+        self.pp_pipeline
+            .run(self.framebuffer.color_texture().unwrap());
+    }
+
+    fn render_scene(&self, scene: &Scene) {
         self.gfx
             .clear(GfxContext::COLOR_BUFFER_BIT | GfxContext::DEPTH_BUFFER_BIT);
 

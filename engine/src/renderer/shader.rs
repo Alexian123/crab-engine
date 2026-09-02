@@ -70,6 +70,10 @@ impl ShaderProgram {
         self.gfx.use_program(Some(&self.program));
     }
 
+    pub fn unbind(&self) {
+        self.gfx.use_program(None);
+    }
+
     pub fn set_uniform<T: Uniform>(&self, name: &str, value: &T) {
         if let Some(location) = self.get_uniform_location(name) {
             value.upload(&self.gfx, &location);

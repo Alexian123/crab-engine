@@ -9,12 +9,10 @@ pub struct FrameBufferObject {
 pub enum FrameBufferTextureAttachment {
     Color,
     Depth,
-    Stencil,
-    DepthStencil,
 }
 
 pub enum FrameBufferRenderBufferAttachment {
-    DepthStencil,
+    Depth,
 }
 
 pub enum VertexBufferTarget {
@@ -36,7 +34,7 @@ pub struct RenderBufferObject {
 }
 
 pub enum RenderBufferFormat {
-    Depth24Stencil8,
+    DepthComponent24,
 }
 
 pub enum TextureTarget {
@@ -49,15 +47,14 @@ pub enum TextureFormat {
     RG,
     RGB,
     RGBA,
+    RGBA8,
     DepthComponent,
-    StencilIndex,
-    Depth24Stencil8,
-    DepthStencil,
+    DepthComponent24,
 }
 
 pub enum TextureDataType {
     UnsignedByte,
-    UnsignedInt24_8,
+    UnsignedInt,
 }
 
 pub enum TextureWrapMode {

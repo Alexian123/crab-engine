@@ -1,10 +1,10 @@
+pub use crate::renderer::MeshTextureSampler2D;
 pub use crate::renderer::ShaderProgram;
-pub use crate::renderer::Texture;
 use std::rc::Rc;
 
 pub struct Material {
     shader: Rc<ShaderProgram>,
-    pub textures: Vec<Rc<Texture>>,
+    pub textures: Vec<Rc<MeshTextureSampler2D>>,
     pub shininess: f32,
     pub diffuse_index: Option<u32>,
     pub specular_index: Option<u32>,
