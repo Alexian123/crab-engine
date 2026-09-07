@@ -137,6 +137,7 @@ impl FramebufferBuilder {
             TextureTarget::Texture2D,
             Some(TextureWrapMode::ClampToEdge),
             Some(TextureWrapMode::ClampToEdge),
+            None,
         );
         self.gfx.framebuffer_texture_2d(
             FrameBufferTextureAttachment::Color,

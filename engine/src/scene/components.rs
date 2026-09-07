@@ -50,14 +50,6 @@ pub struct MaterialComponent {
 
 impl Component for MaterialComponent {}
 
-pub struct CameraComponent {
-    pub position: Vec3,
-    pub projection: Mat4,
-    pub view: Mat4,
-}
-
-impl Component for CameraComponent {}
-
 pub struct LightingComponent {
     pub lights_mask: u32,
     pub directional_lights: Vec<DirectionalLight>,

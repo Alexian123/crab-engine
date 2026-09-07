@@ -40,6 +40,12 @@ pub enum RenderBufferFormat {
 pub enum TextureTarget {
     Texture2D,
     TextureCubeMap,
+    TextureCubeMapPositiveX,
+    TextureCubeMapNegativeX,
+    TextureCubeMapPositiveY,
+    TextureCubeMapNegativeY,
+    TextureCubeMapPositiveZ,
+    TextureCubeMapNegativeZ,
 }
 
 pub enum TextureFormat {

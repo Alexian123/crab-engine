@@ -59,7 +59,7 @@ impl Mesh {
             vao,
             vbo,
             ebo,
-            vertex_count: vertices.len(),
+            vertex_count: vertices.len() * layout.attribs[0].format.size() / stride,
             index_count: indices.len(),
         })
     }

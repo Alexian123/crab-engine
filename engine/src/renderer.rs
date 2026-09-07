@@ -1,24 +1,29 @@
-pub mod framebuffer;
-pub mod material;
-pub mod mesh;
+pub mod camera;
+mod framebuffer;
+mod material;
+mod mesh;
 pub mod postprocessing;
-pub mod shader;
-pub mod texture;
-pub mod uniform;
+mod shader;
+mod skybox;
+mod texture;
+mod uniform;
 
 use crate::GfxContext;
 use crate::scene::*;
+use camera::Camera;
 pub use framebuffer::{Framebuffer, FramebufferBuilder};
 pub use material::Material;
 pub use mesh::Mesh;
 pub use postprocessing::PostProcessingStage;
 use postprocessing::*;
 pub use shader::ShaderProgram;
+pub use skybox::Skybox;
 use std::rc::Rc;
-pub use texture::MeshTextureSampler2D;
+pub use texture::{Sampler2D, SamplerCube, TextureSampler};
 
 pub struct Renderer {
     gfx: Rc<GfxContext>,
+    skybox: Option<Rc<Skybox>>,
     framebuffer: Framebuffer,
     pp_pipeline: PostProcessingPipeline,
 }
@@ -26,6 +31,7 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         gfx: Rc<GfxContext>,
+        skybox: Option<Rc<Skybox>>,
         screen_width: u32,
         screen_height: u32,
         screen_quad: Rc<Mesh>,
@@ -38,6 +44,7 @@ impl Renderer {
         let pp_pipeline = PostProcessingPipeline::new(Rc::clone(&gfx), screen_quad, screen_shader);
         Ok(Self {
             gfx,
+            skybox,
             framebuffer,
             pp_pipeline,
         })
@@ -51,21 +58,24 @@ impl Renderer {
         self.pp_pipeline.stages.clear();
     }
 
-    pub fn render(&self, scene: &Scene) {
+    pub fn set_skybox(&mut self, skybox: Option<Rc<Skybox>>) {
+        self.skybox = skybox;
+    }
+
+    pub fn render(&self, scene: &Scene, camera: &dyn Camera) {
         self.framebuffer.bind();
-        self.render_scene(scene);
+        self.render_world(scene.world(), camera);
+        self.render_skybox(camera);
         self.framebuffer.unbind();
         self.pp_pipeline
             .run(self.framebuffer.color_texture().unwrap());
     }
 
-    fn render_scene(&self, scene: &Scene) {
+    fn render_world(&self, world: &World, camera: &dyn Camera) {
         self.gfx
             .clear(GfxContext::COLOR_BUFFER_BIT | GfxContext::DEPTH_BUFFER_BIT);
 
-        let world = scene.world();
         let lighting = world.query::<LightingComponent>().next().map(|(_, c)| c);
-        let camera = world.query::<CameraComponent>().next().map(|(_, c)| c);
 
         for (entity, world_transform, mesh_comp) in
             world.query2::<WorldTransformComponent, MeshComponent>()
@@ -78,11 +88,9 @@ impl Renderer {
                 shader.set_uniform("uModel", &world_transform.model_matrix);
                 shader.set_uniform("uNormal", &world_transform.normal_matrix());
 
-                if let Some(camera_comp) = camera {
-                    shader.set_uniform("uView", &camera_comp.view);
-                    shader.set_uniform("uProjection", &camera_comp.projection);
-                    shader.set_uniform("uViewPos", &camera_comp.position);
-                }
+                shader.set_uniform("uView", &camera.view());
+                shader.set_uniform("uProjection", &camera.projection());
+                shader.set_uniform("uViewPos", &camera.position());
 
                 if let Some(lighting) = lighting {
                     // directional lights
@@ -176,6 +184,19 @@ impl Renderer {
                 mesh_comp.mesh.draw();
                 mesh_comp.mesh.unbind();
             }
+        }
+    }
+
+    fn render_skybox(&self, camera: &dyn Camera) {
+        if let Some(skybox) = &self.skybox {
+            self.gfx.set_depth_func(crate::gfx::DepthFunc::LessEqual);
+            skybox.bind();
+            let shader = skybox.shader();
+            let view = glam::Mat4::from_mat3(glam::Mat3::from_mat4(camera.view())); // remove translation from the view matrix
+            shader.set_uniform("uView", &view);
+            shader.set_uniform("uProjection", &camera.projection());
+            skybox.draw();
+            self.gfx.set_depth_func(crate::gfx::DepthFunc::Less);
         }
     }
 }

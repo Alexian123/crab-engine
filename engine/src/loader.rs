@@ -5,7 +5,7 @@ mod shader_loader;
 mod texture_loader;
 
 use crate::GfxContext;
-use crate::renderer::{Material, Mesh};
+use crate::renderer::{Material, Mesh, Skybox};
 use crate::scene::components::*;
 use crate::scene::set_parent;
 use crate::scene::{Entity, Scene};
@@ -42,6 +42,31 @@ impl Loader {
             model_files: ModelFileLoader::new(),
             material_cache: HashMap::new(),
         }
+    }
+
+    pub fn load_skybox(
+        &mut self,
+        faces_dir_path: &Path,
+        face_images: [&str; 6],
+        vertex: &Path,
+        fragment: &Path,
+    ) -> Option<Rc<Skybox>> {
+        let mesh = match self.meshes.load_skybox_cube() {
+            Ok(mesh) => mesh,
+            Err(err) => {
+                tracing::error!("Failed to load skybox mesh: {}", err);
+                return None;
+            }
+        };
+        let shader = self.load_shader(vertex, fragment)?;
+        let sampler = match self.textures.load_cubemap(faces_dir_path, face_images) {
+            Ok(sampler) => sampler,
+            Err(err) => {
+                tracing::error!("Failed to load cubemap: {}", err);
+                return None;
+            }
+        };
+        Some(Rc::new(Skybox::new(mesh, shader, sampler)))
     }
 
     pub fn load_model(&mut self, path: &Path, scene: &mut Scene) -> Option<Entity> {
@@ -201,7 +226,7 @@ impl Loader {
                     if let Some(texture_dir) = texture_dir {
                         texture_path = texture_dir.join(texture_path);
                     }
-                    if let Some(texture) = self.load_texture(texture_path.as_path()) {
+                    if let Some(texture) = self.load_sampler_2d_texture(texture_path.as_path()) {
                         material.textures.push(texture);
                     } else {
                         tracing::error!(
@@ -288,8 +313,8 @@ impl Loader {
         }
     }
 
-    pub fn load_texture(&mut self, path: &Path) -> Option<Rc<MeshTextureSampler2D>> {
-        match self.textures.load(path) {
+    pub fn load_sampler_2d_texture(&mut self, path: &Path) -> Option<Rc<Sampler2D>> {
+        match self.textures.load_sampler_2d(path) {
             Ok(texture) => Some(texture),
             Err(err) => {
                 tracing::error!("Failed to load texture: {}", err);

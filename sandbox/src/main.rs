@@ -4,11 +4,11 @@ mod postprocess_fx;
 use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
-use engine::scene::camera::ThirdPersonCamera;
+use engine::renderer::camera::*;
 use engine::scene::terrain::{self, get_height_at_point};
 use engine::scene::*;
 use engine::{Application, InputManager, run};
-use glam::{Mat4, Quat, Vec3};
+use glam::{Quat, Vec3};
 use movement::MovementController;
 use rand::Rng;
 use std::path::Path;
@@ -68,57 +68,9 @@ impl Application for Sandbox {
         );
         tracing::info!("Done.");
 
-        let world = self.scene.world_mut();
-
-        tracing::info!("Loading camera...");
-
-        let camera_entity = world.create_entity();
-        world.add_component(
-            camera_entity,
-            CameraComponent {
-                position: Vec3::ZERO,
-                view: Mat4::IDENTITY,
-                projection: Mat4::IDENTITY,
-            },
-        );
-
-        tracing::info!("Done.");
-
-        tracing::info!("Loading primitive models...");
-
-        let cube_mesh = loader
-            .load_mesh(Path::new("./assets/models//Cube.mesh"))
-            .unwrap();
-
-        let crate_material = loader
-            .load_material(Path::new("./assets/materials/crate.mat"), None)
-            .unwrap();
-
-        let crate_entity = world.create_entity();
-        world.add_component(
-            crate_entity,
-            LocalTransformComponent {
-                position: Vec3::new(-2.0, 0.0, -4.0),
-                rotation: Quat::IDENTITY,
-                scale: Vec3::new(1.0, 1.0, 1.0),
-            },
-        );
-        world.add_component(
-            crate_entity,
-            MeshComponent {
-                mesh: Rc::clone(&cube_mesh),
-            },
-        );
-        world.add_component(
-            crate_entity,
-            MaterialComponent {
-                material: Rc::clone(&crate_material),
-            },
-        );
-
-        tracing::info!("Done.");
-
         tracing::info!("Loading lights...");
+
+        let world = self.scene.world_mut();
 
         let lighting_entity = world.create_entity();
         world.add_component(
@@ -189,7 +141,55 @@ impl Application for Sandbox {
 
         tracing::info!("Done.");
 
+        tracing::info!("Loading skybox");
+
+        let skybox = loader.load_skybox(
+            Path::new("./assets/textures/skybox/"),
+            [
+                "right.jpg",
+                "left.jpg",
+                "top.jpg",
+                "bottom.jpg",
+                "front.jpg",
+                "back.jpg",
+            ],
+            Path::new("./assets/shaders/skybox.vert"),
+            Path::new("./assets/shaders/skybox.frag"),
+        );
+
+        tracing::info!("Done.");
+
         tracing::info!("Loading asset models...");
+
+        let cube_mesh = loader
+            .load_mesh(Path::new("./assets/models//Cube.mesh"))
+            .unwrap();
+
+        let crate_material = loader
+            .load_material(Path::new("./assets/materials/crate.mat"), None)
+            .unwrap();
+
+        let crate_entity = world.create_entity();
+        world.add_component(
+            crate_entity,
+            LocalTransformComponent {
+                position: Vec3::new(-2.0, 0.0, -4.0),
+                rotation: Quat::IDENTITY,
+                scale: Vec3::new(1.0, 1.0, 1.0),
+            },
+        );
+        world.add_component(
+            crate_entity,
+            MeshComponent {
+                mesh: Rc::clone(&cube_mesh),
+            },
+        );
+        world.add_component(
+            crate_entity,
+            MaterialComponent {
+                material: Rc::clone(&crate_material),
+            },
+        );
 
         let backpack = loader
             .load_model(
@@ -263,7 +263,7 @@ impl Application for Sandbox {
                 Quat::from_rotation_y(rng.gen_range(0.0..std::f32::consts::TAU));
         }
 
-        self.scene.update(self.movement_ctrl.get_active_camera());
+        self.scene.update();
 
         tracing::info!("Done.");
 
@@ -271,6 +271,7 @@ impl Application for Sandbox {
         self.renderer = Some(
             Renderer::new(
                 Rc::clone(gfx),
+                skybox,
                 self.window_width,
                 self.window_height,
                 loader.load_quad().expect("Failed to load screen quad"),
@@ -353,14 +354,17 @@ impl Application for Sandbox {
         lighting.spot_lights[0].pl.position = self.movement_ctrl.get_active_camera().position();
         lighting.spot_lights[0].direction = self.movement_ctrl.get_active_camera().forward();
 
-        self.scene.update(self.movement_ctrl.get_active_camera());
+        self.scene.update();
 
         false
     }
 
     fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {
         // render scene and apply post-processing
-        self.renderer.as_ref().unwrap().render(&self.scene);
+        self.renderer
+            .as_ref()
+            .unwrap()
+            .render(&self.scene, self.movement_ctrl.get_active_camera());
     }
 
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {

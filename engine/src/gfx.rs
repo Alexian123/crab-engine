@@ -11,6 +11,16 @@ pub enum DrawMode {
     Points,
 }
 
+pub enum DepthFunc {
+    Never,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Equal,
+    NotEqual,
+}
+
 pub struct GfxContext {
     gl: glow::Context,
 }
@@ -36,6 +46,20 @@ impl GfxContext {
             } else {
                 self.gl.disable(glow::DEPTH_TEST);
             }
+        }
+    }
+
+    pub fn set_depth_func(&self, func: DepthFunc) {
+        unsafe {
+            self.gl.depth_func(match func {
+                DepthFunc::Never => glow::NEVER,
+                DepthFunc::Less => glow::LESS,
+                DepthFunc::LessEqual => glow::LEQUAL,
+                DepthFunc::Greater => glow::GREATER,
+                DepthFunc::GreaterEqual => glow::GEQUAL,
+                DepthFunc::Equal => glow::EQUAL,
+                DepthFunc::NotEqual => glow::NOTEQUAL,
+            });
         }
     }
 
@@ -118,7 +142,7 @@ impl GfxContext {
             self.gl.framebuffer_texture_2d(
                 glow::FRAMEBUFFER,
                 self.get_framebuffer_texture_attachment_u32(attachment),
-                self.get_texture_target_u32(texture_target),
+                self.get_texture_target_u32(&texture_target),
                 texture.map(|t| t.internal_texture),
                 level,
             );
@@ -344,16 +368,22 @@ impl GfxContext {
     pub fn bind_texture(&self, target: TextureTarget, texture: Option<&TextureObject>) {
         unsafe {
             self.gl.bind_texture(
-                self.get_texture_target_u32(target),
+                self.get_texture_target_u32(&target),
                 texture.map(|t| t.internal_texture),
             );
         }
     }
 
-    fn get_texture_target_u32(&self, target: TextureTarget) -> u32 {
+    fn get_texture_target_u32(&self, target: &TextureTarget) -> u32 {
         match target {
             TextureTarget::Texture2D => glow::TEXTURE_2D,
             TextureTarget::TextureCubeMap => glow::TEXTURE_CUBE_MAP,
+            TextureTarget::TextureCubeMapPositiveX => glow::TEXTURE_CUBE_MAP_POSITIVE_X,
+            TextureTarget::TextureCubeMapNegativeX => glow::TEXTURE_CUBE_MAP_NEGATIVE_X,
+            TextureTarget::TextureCubeMapPositiveY => glow::TEXTURE_CUBE_MAP_POSITIVE_Y,
+            TextureTarget::TextureCubeMapNegativeY => glow::TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            TextureTarget::TextureCubeMapPositiveZ => glow::TEXTURE_CUBE_MAP_POSITIVE_Z,
+            TextureTarget::TextureCubeMapNegativeZ => glow::TEXTURE_CUBE_MAP_NEGATIVE_Z,
         }
     }
 
@@ -371,20 +401,48 @@ impl GfxContext {
     ) {
         unsafe {
             self.gl.tex_image_2d(
-                self.get_texture_target_u32(target),
+                self.get_texture_target_u32(&target),
                 level,
-                self.get_texture_format_u32(internal_format) as i32,
+                self.get_texture_format_u32(&internal_format) as i32,
                 width,
                 height,
                 border,
-                self.get_texture_format_u32(format),
-                self.get_texture_data_type_u32(data_type),
+                self.get_texture_format_u32(&format),
+                self.get_texture_data_type_u32(&data_type),
                 pixels,
             );
         }
     }
 
-    fn get_texture_format_u32(&self, format: TextureFormat) -> u32 {
+    pub fn tex_image_cube_map(
+        &self,
+        level: i32,
+        internal_format: TextureFormat,
+        width: i32,
+        height: i32,
+        border: i32,
+        format: TextureFormat,
+        data_type: TextureDataType,
+        faces: [&[u8]; 6], // in order: +x, -x, +y, -y, +z, -z
+    ) {
+        unsafe {
+            for i in 0..6 {
+                self.gl.tex_image_2d(
+                    self.get_texture_target_u32(&TextureTarget::TextureCubeMapPositiveX) + i as u32,
+                    level,
+                    self.get_texture_format_u32(&internal_format) as i32,
+                    width,
+                    height,
+                    border,
+                    self.get_texture_format_u32(&format),
+                    self.get_texture_data_type_u32(&data_type),
+                    Some(faces[i]),
+                );
+            }
+        }
+    }
+
+    fn get_texture_format_u32(&self, format: &TextureFormat) -> u32 {
         match format {
             TextureFormat::RED => glow::RED,
             TextureFormat::RG => glow::RG,
@@ -396,7 +454,7 @@ impl GfxContext {
         }
     }
 
-    fn get_texture_data_type_u32(&self, data_type: TextureDataType) -> u32 {
+    fn get_texture_data_type_u32(&self, data_type: &TextureDataType) -> u32 {
         match data_type {
             TextureDataType::UnsignedByte => glow::UNSIGNED_BYTE,
             TextureDataType::UnsignedInt => glow::UNSIGNED_INT,
@@ -405,7 +463,8 @@ impl GfxContext {
 
     pub fn generate_mipmap(&self, target: TextureTarget) {
         unsafe {
-            self.gl.generate_mipmap(self.get_texture_target_u32(target));
+            self.gl
+                .generate_mipmap(self.get_texture_target_u32(&target));
         }
     }
 
@@ -414,27 +473,35 @@ impl GfxContext {
         target: TextureTarget,
         wrap_s: Option<TextureWrapMode>,
         wrap_t: Option<TextureWrapMode>,
+        wrap_r: Option<TextureWrapMode>,
     ) {
-        let target = self.get_texture_target_u32(target);
+        let target = self.get_texture_target_u32(&target);
         unsafe {
             if let Some(wrap_s) = wrap_s {
                 self.gl.tex_parameter_i32(
                     target,
                     glow::TEXTURE_WRAP_S,
-                    self.get_texture_wrap_i32(wrap_s),
+                    self.get_texture_wrap_i32(&wrap_s),
                 );
             }
             if let Some(wrap_t) = wrap_t {
                 self.gl.tex_parameter_i32(
                     target,
                     glow::TEXTURE_WRAP_T,
-                    self.get_texture_wrap_i32(wrap_t),
+                    self.get_texture_wrap_i32(&wrap_t),
+                );
+            }
+            if let Some(wrap_r) = wrap_r {
+                self.gl.tex_parameter_i32(
+                    target,
+                    glow::TEXTURE_WRAP_R,
+                    self.get_texture_wrap_i32(&wrap_r),
                 );
             }
         }
     }
 
-    fn get_texture_wrap_i32(&self, wrap: TextureWrapMode) -> i32 {
+    fn get_texture_wrap_i32(&self, wrap: &TextureWrapMode) -> i32 {
         match wrap {
             TextureWrapMode::Repeat => glow::REPEAT as i32,
             TextureWrapMode::ClampToEdge => glow::CLAMP_TO_EDGE as i32,
@@ -447,26 +514,26 @@ impl GfxContext {
         min: Option<TextureFilterMode>,
         mag: Option<TextureFilterMode>,
     ) {
-        let target = self.get_texture_target_u32(target);
+        let target = self.get_texture_target_u32(&target);
         unsafe {
             if let Some(min) = min {
                 self.gl.tex_parameter_i32(
                     target,
                     glow::TEXTURE_MIN_FILTER,
-                    self.get_texture_filter_i32(min),
+                    self.get_texture_filter_i32(&min),
                 );
             }
             if let Some(mag) = mag {
                 self.gl.tex_parameter_i32(
                     target,
                     glow::TEXTURE_MAG_FILTER,
-                    self.get_texture_filter_i32(mag),
+                    self.get_texture_filter_i32(&mag),
                 );
             }
         }
     }
 
-    fn get_texture_filter_i32(&self, filter: TextureFilterMode) -> i32 {
+    fn get_texture_filter_i32(&self, filter: &TextureFilterMode) -> i32 {
         match filter {
             TextureFilterMode::Linear => glow::LINEAR as i32,
             TextureFilterMode::LinearMipmapLinear => glow::LINEAR_MIPMAP_LINEAR as i32,
@@ -476,7 +543,7 @@ impl GfxContext {
     pub fn create_shader(&self, shader_type: ShaderType) -> Result<ShaderObject, String> {
         let shader = unsafe {
             self.gl
-                .create_shader(self.get_shader_type_u32(shader_type))?
+                .create_shader(self.get_shader_type_u32(&shader_type))?
         };
         Ok(ShaderObject {
             internal_shader: shader,
@@ -489,7 +556,7 @@ impl GfxContext {
         }
     }
 
-    fn get_shader_type_u32(&self, shader_type: ShaderType) -> u32 {
+    fn get_shader_type_u32(&self, shader_type: &ShaderType) -> u32 {
         match shader_type {
             ShaderType::Vertex => glow::VERTEX_SHADER,
             ShaderType::Fragment => glow::FRAGMENT_SHADER,

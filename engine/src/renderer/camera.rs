@@ -1,5 +1,5 @@
-pub mod fly;
-pub mod third_person;
+mod fly;
+mod third_person;
 
 pub use fly::FlyCamera;
 use glam::{Mat4, Vec3};

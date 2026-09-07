@@ -1,11 +1,9 @@
-pub mod camera;
 pub mod components;
-pub mod ecs;
-pub mod hierarchy;
-pub mod lights;
+mod ecs;
+mod hierarchy;
+mod lights;
 pub mod terrain;
 
-pub use camera::{Camera, FlyCamera};
 pub use components::*;
 pub use ecs::{Component, Entity, World};
 pub use hierarchy::{clear_parent, set_parent};
@@ -22,15 +20,8 @@ impl Scene {
         }
     }
 
-    pub fn update(&mut self, camera: &dyn Camera) {
+    pub fn update(&mut self) {
         hierarchy::update_world_transforms(&mut self.world);
-
-        // update camera component
-        if let Some((_, camera_comp)) = self.world.query_mut::<CameraComponent>().next() {
-            camera_comp.position = camera.position();
-            camera_comp.view = camera.view();
-            camera_comp.projection = camera.projection();
-        }
     }
 
     pub fn world(&self) -> &World {

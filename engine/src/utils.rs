@@ -1,4 +1,4 @@
-pub mod height_generator;
+mod height_generator;
 pub mod shader_preprocessor;
 
 pub use height_generator::HeightGenerator;

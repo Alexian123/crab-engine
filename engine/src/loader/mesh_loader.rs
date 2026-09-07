@@ -34,6 +34,42 @@ impl MeshLoader {
         }
     }
 
+    pub fn load_skybox_cube(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
+        let path = PathBuf::from("skybox_cube.mesh");
+
+        if let Some(mesh) = self.cache.get(&path) {
+            return Ok(Rc::clone(mesh));
+        }
+
+        let vertices = vec![
+            -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0,
+            -1.0, 1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0,
+            -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, 1.0, -1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
+            -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+        ];
+
+        let layout = VertexLayout {
+            attribs: vec![VertexAttribute {
+                location: 0,
+                count: 3,
+                format: VertexFormat::Float32,
+                normalized: false,
+                offset: 0,
+            }],
+        };
+
+        let mesh = Rc::new(
+            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], layout)
+                .map_err(MeshLoadError::InvalidMesh)?,
+        );
+
+        self.cache.insert(path, Rc::clone(&mesh));
+        Ok(mesh)
+    }
+
     pub fn load_quad(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
         let path = PathBuf::from("quad.mesh");
 
