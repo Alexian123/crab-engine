@@ -1,4 +1,5 @@
 use crate::GfxContext;
+use crate::gfx::DrawMode;
 use crate::gfx::vertex::*;
 use crate::renderer::Mesh;
 use crate::utils::HeightGenerator;
@@ -34,6 +35,40 @@ impl MeshLoader {
         }
     }
 
+    pub fn load_ui_quad(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
+        let path = PathBuf::from("ui_quad.mesh");
+
+        if let Some(mesh) = self.cache.get(&path) {
+            return Ok(Rc::clone(mesh));
+        }
+
+        let vertices = vec![-1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, -1.0];
+
+        let layout = VertexLayout {
+            attribs: vec![VertexAttribute {
+                location: 0,
+                count: 2,
+                format: VertexFormat::Float32,
+                normalized: false,
+                offset: 0,
+            }],
+        };
+
+        let mesh = Rc::new(
+            Mesh::new(
+                Rc::clone(&self.gfx),
+                &vertices,
+                &[],
+                layout,
+                DrawMode::TriangleStrip,
+            )
+            .map_err(MeshLoadError::InvalidMesh)?,
+        );
+
+        self.cache.insert(path, Rc::clone(&mesh));
+        Ok(mesh)
+    }
+
     pub fn load_skybox_cube(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
         let path = PathBuf::from("skybox_cube.mesh");
 
@@ -62,16 +97,22 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], layout)
-                .map_err(MeshLoadError::InvalidMesh)?,
+            Mesh::new(
+                Rc::clone(&self.gfx),
+                &vertices,
+                &[],
+                layout,
+                DrawMode::Triangles,
+            )
+            .map_err(MeshLoadError::InvalidMesh)?,
         );
 
         self.cache.insert(path, Rc::clone(&mesh));
         Ok(mesh)
     }
 
-    pub fn load_quad(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
-        let path = PathBuf::from("quad.mesh");
+    pub fn load_screen_quad(&mut self) -> Result<Rc<Mesh>, MeshLoadError> {
+        let path = PathBuf::from("screen_quad.mesh");
 
         if let Some(mesh) = self.cache.get(&path) {
             return Ok(Rc::clone(mesh));
@@ -111,8 +152,14 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &[], layout)
-                .map_err(MeshLoadError::InvalidMesh)?,
+            Mesh::new(
+                Rc::clone(&self.gfx),
+                &vertices,
+                &[],
+                layout,
+                DrawMode::Triangles,
+            )
+            .map_err(MeshLoadError::InvalidMesh)?,
         );
 
         self.cache.insert(path, Rc::clone(&mesh));
@@ -173,8 +220,14 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &mesh_data.indices, layout)
-                .map_err(MeshLoadError::InvalidMesh)?,
+            Mesh::new(
+                Rc::clone(&self.gfx),
+                &vertices,
+                &mesh_data.indices,
+                layout,
+                DrawMode::Triangles,
+            )
+            .map_err(MeshLoadError::InvalidMesh)?,
         );
 
         self.cache.insert(path, Rc::clone(&mesh));
@@ -295,8 +348,14 @@ impl MeshLoader {
         };
 
         let mesh = Rc::new(
-            Mesh::new(Rc::clone(&self.gfx), &vertices, &indices, layout)
-                .map_err(MeshLoadError::InvalidMesh)?,
+            Mesh::new(
+                Rc::clone(&self.gfx),
+                &vertices,
+                &indices,
+                layout,
+                DrawMode::Triangles,
+            )
+            .map_err(MeshLoadError::InvalidMesh)?,
         );
 
         self.cache.insert(path, Rc::clone(&mesh));

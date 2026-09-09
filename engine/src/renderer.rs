@@ -10,6 +10,7 @@ mod uniform;
 
 use crate::GfxContext;
 use crate::scene::*;
+use crate::ui::*;
 use camera::Camera;
 pub use framebuffer::{Framebuffer, FramebufferBuilder};
 pub use material::Material;
@@ -68,13 +69,14 @@ impl Renderer {
         self.skybox = skybox;
     }
 
-    pub fn render(&self, scene: &Scene, camera: &dyn Camera) {
+    pub fn render(&self, scene: &Scene, camera: &dyn Camera, ui: Option<&UI>) {
         self.framebuffer.bind();
         self.render_world(scene.world(), camera);
         self.render_skybox(camera);
         self.framebuffer.unbind();
         self.pp_pipeline
             .run(self.framebuffer.color_texture().unwrap());
+        self.render_ui(ui);
     }
 
     fn render_world(&self, world: &World, camera: &dyn Camera) {
@@ -203,6 +205,36 @@ impl Renderer {
             shader.set_uniform("uProjection", &camera.projection());
             skybox.draw();
             self.gfx.set_depth_func(crate::gfx::DepthFunc::Less);
+        }
+    }
+
+    fn render_ui(&self, ui: Option<&UI>) {
+        if let Some(ui) = ui {
+            self.gfx.set_depth_test(false);
+            self.gfx.set_blend(true);
+            self.gfx.set_blend_func(
+                crate::gfx::BlendFunc::SrcAlpha,
+                crate::gfx::BlendFunc::OneMinusSrcAlpha,
+            );
+
+            let mesh = ui.mesh();
+            let shader = ui.shader();
+
+            mesh.bind();
+            shader.bind();
+
+            // render each HUD element
+            for element in &ui.hud {
+                element.texture.bind(0);
+                shader.set_uniform("uTransform", &element.transform());
+                mesh.draw();
+            }
+
+            shader.unbind();
+            mesh.unbind();
+
+            self.gfx.set_blend(false);
+            self.gfx.set_depth_test(true);
         }
     }
 }

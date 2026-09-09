@@ -7,6 +7,7 @@ use engine::renderer::Renderer;
 use engine::renderer::camera::*;
 use engine::scene::terrain::{self, get_height_at_point};
 use engine::scene::*;
+use engine::ui::*;
 use engine::{Application, InputManager, run};
 use glam::{Quat, Vec3};
 use movement::MovementController;
@@ -26,6 +27,7 @@ struct Sandbox {
     movement_ctrl: MovementController,
     window_width: u32,
     window_height: u32,
+    ui: Option<UI>,
 }
 
 impl Application for Sandbox {
@@ -280,9 +282,11 @@ impl Application for Sandbox {
                 skybox,
                 self.window_width,
                 self.window_height,
-                loader.load_quad().expect("Failed to load screen quad"),
                 loader
-                    .load_textured_quad_shader()
+                    .load_screen_quad()
+                    .expect("Failed to load screen quad"),
+                loader
+                    .load_screen_quad_shader()
                     .expect("Failed to load textured quad shader"),
             )
             .expect("Failed to create renderer"),
@@ -333,6 +337,28 @@ impl Application for Sandbox {
         renderer.add_post_processing_stage(Box::new(contrast_changer));
 
         tracing::info!("Done.");
+
+        tracing::info!("Loading UI...");
+
+        let ui_shader = loader
+            .load_ui_quad_shader()
+            .expect("Failed to load UI quad shader");
+
+        let ui_mesh = loader.load_ui_quad().expect("Failed to load UI quad mesh");
+
+        self.ui = Some(UI::new(ui_shader, ui_mesh));
+        let ui = self.ui.as_mut().unwrap();
+
+        let hud_texture = loader
+            .load_sampler_2d_texture(Path::new("./assets/textures/HUD/mmorpg.png"))
+            .expect("Failed to load HUD texture");
+        ui.hud.push(HUDElement {
+            texture: hud_texture,
+            position: glam::Vec2::new(-0.75, -0.82),
+            scale: glam::Vec2::new(0.25, 0.15),
+        });
+
+        tracing::info!("Done.");
     }
 
     fn update(&mut self, input: &InputManager, dt: f32) -> bool {
@@ -368,10 +394,11 @@ impl Application for Sandbox {
 
     fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {
         // render scene and apply post-processing
-        self.renderer
-            .as_ref()
-            .unwrap()
-            .render(&self.scene, self.movement_ctrl.get_active_camera());
+        self.renderer.as_ref().unwrap().render(
+            &self.scene,
+            self.movement_ctrl.get_active_camera(),
+            self.ui.as_ref(),
+        );
     }
 
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
@@ -407,6 +434,7 @@ fn main() {
         ),
         window_width: WINDOW_WIDTH,
         window_height: WINDOW_HEIGHT,
+        ui: None,
     };
     run("Sandbox", app);
 }

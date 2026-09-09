@@ -37,9 +37,52 @@ impl ShaderLoader {
         }
     }
 
-    pub fn load_textured_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
-        let vert_path = PathBuf::from("textured_quad.vert");
-        let frag_path = PathBuf::from("textured_quad.frag");
+    pub fn load_ui_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
+        let vert_path = PathBuf::from("ui_quad.vert");
+        let frag_path = PathBuf::from("ui_quad.frag");
+        let key = ShaderKey {
+            vertex: vert_path,
+            fragment: frag_path,
+        };
+
+        if let Some(shader) = self.cache.get(&key) {
+            return Ok(Rc::clone(shader));
+        }
+
+        let vertex_source = "
+            #version 330 core
+            layout(location = 0) in vec2 aPos;
+            out vec2 vUV;
+            uniform mat4 uTransform;
+            void main(void) {
+               	gl_Position = uTransform * vec4(aPos, 0.0, 1.0);
+               	vUV = vec2((aPos.x + 1.0) / 2.0, 1.0 - (aPos.y + 1.0) / 2.0);
+            }
+        ";
+
+        let fragment_source = "
+            #version 330 core
+            in vec2 vUV;
+            out vec4 FragColor;
+            uniform sampler2D uUITexture;
+            void main(void) {
+                FragColor = texture(uUITexture, vUV);
+            }
+        ";
+
+        let shader = Rc::new(
+            ShaderProgram::new(Rc::clone(&self.gfx), &vertex_source, &fragment_source)
+                .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
+        );
+
+        self.cache.insert(key, Rc::clone(&shader));
+
+        Ok(shader)
+    }
+
+    pub fn load_screen_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
+        let vert_path = PathBuf::from("screen_quad.vert");
+        let frag_path = PathBuf::from("screen_quad.frag");
         let key = ShaderKey {
             vertex: vert_path,
             fragment: frag_path,

@@ -12,6 +12,7 @@ pub struct Mesh {
     ebo: Option<VertexBufferObject>,
     vertex_count: usize,
     index_count: usize,
+    draw_mode: DrawMode,
 }
 
 impl Mesh {
@@ -20,6 +21,7 @@ impl Mesh {
         vertices: &[f32],
         indices: &[u32],
         layout: VertexLayout,
+        draw_mode: DrawMode,
     ) -> Result<Self, String> {
         // Create VAO, VBO, and EBO
         let vao = gfx.create_vao()?;
@@ -61,6 +63,7 @@ impl Mesh {
             ebo,
             vertex_count: vertices.len() * std::mem::size_of::<f32>() / stride,
             index_count: indices.len(),
+            draw_mode,
         })
     }
 
@@ -71,7 +74,6 @@ impl Mesh {
     pub fn index_count(&self) -> usize {
         self.index_count
     }
-
     pub fn bind(&self) {
         self.gfx.bind_vao(Some(&self.vao));
     }
@@ -83,10 +85,10 @@ impl Mesh {
     pub fn draw(&self) {
         if self.index_count > 0 {
             self.gfx
-                .draw_elements(DrawMode::Triangles, self.index_count as i32, 0);
+                .draw_elements(self.draw_mode, self.index_count as i32, 0);
         } else {
             self.gfx
-                .draw_arrays(DrawMode::Triangles, 0, self.vertex_count as i32);
+                .draw_arrays(self.draw_mode, 0, self.vertex_count as i32);
         }
     }
 }

@@ -254,8 +254,18 @@ impl Loader {
         }
     }
 
-    pub fn load_quad(&mut self) -> Option<Rc<Mesh>> {
-        match self.meshes.load_quad() {
+    pub fn load_ui_quad(&mut self) -> Option<Rc<Mesh>> {
+        match self.meshes.load_ui_quad() {
+            Ok(mesh) => Some(mesh),
+            Err(err) => {
+                tracing::error!("Failed to load quad: {}", err);
+                None
+            }
+        }
+    }
+
+    pub fn load_screen_quad(&mut self) -> Option<Rc<Mesh>> {
+        match self.meshes.load_screen_quad() {
             Ok(mesh) => Some(mesh),
             Err(err) => {
                 tracing::error!("Failed to load quad: {}", err);
@@ -293,8 +303,18 @@ impl Loader {
         }
     }
 
-    pub fn load_textured_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
-        match self.shaders.load_textured_quad_shader() {
+    pub fn load_ui_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
+        match self.shaders.load_ui_quad_shader() {
+            Ok(shader) => Some(shader),
+            Err(err) => {
+                tracing::error!("Failed to load shader: {}", err);
+                None
+            }
+        }
+    }
+
+    pub fn load_screen_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
+        match self.shaders.load_screen_quad_shader() {
             Ok(shader) => Some(shader),
             Err(err) => {
                 tracing::error!("Failed to load shader: {}", err);

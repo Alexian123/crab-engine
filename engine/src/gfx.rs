@@ -5,12 +5,15 @@ use buffers::*;
 use glow::HasContext;
 use vertex::*;
 
+#[derive(Debug, Clone, Copy)]
 pub enum DrawMode {
     Triangles,
     Lines,
     Points,
+    TriangleStrip,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum DepthFunc {
     Never,
     Less,
@@ -19,6 +22,16 @@ pub enum DepthFunc {
     GreaterEqual,
     Equal,
     NotEqual,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum BlendFunc {
+    Zero,
+    One,
+    SrcAlpha,
+    DstAlpha,
+    OneMinusSrcAlpha,
+    OneMinusDstAlpha,
 }
 
 pub struct GfxContext {
@@ -60,6 +73,34 @@ impl GfxContext {
                 DepthFunc::Equal => glow::EQUAL,
                 DepthFunc::NotEqual => glow::NOTEQUAL,
             });
+        }
+    }
+
+    pub fn set_blend(&self, enabled: bool) {
+        unsafe {
+            if enabled {
+                self.gl.enable(glow::BLEND);
+            } else {
+                self.gl.disable(glow::BLEND);
+            }
+        }
+    }
+
+    pub fn set_blend_func(&self, src: BlendFunc, dst: BlendFunc) {
+        unsafe {
+            self.gl
+                .blend_func(self.get_blend_func_u32(src), self.get_blend_func_u32(dst));
+        }
+    }
+
+    fn get_blend_func_u32(&self, func: BlendFunc) -> u32 {
+        match func {
+            BlendFunc::Zero => glow::ZERO,
+            BlendFunc::One => glow::ONE,
+            BlendFunc::SrcAlpha => glow::SRC_ALPHA,
+            BlendFunc::DstAlpha => glow::DST_ALPHA,
+            BlendFunc::OneMinusSrcAlpha => glow::ONE_MINUS_SRC_ALPHA,
+            BlendFunc::OneMinusDstAlpha => glow::ONE_MINUS_DST_ALPHA,
         }
     }
 
@@ -343,6 +384,7 @@ impl GfxContext {
             DrawMode::Triangles => glow::TRIANGLES,
             DrawMode::Lines => glow::LINES,
             DrawMode::Points => glow::POINTS,
+            DrawMode::TriangleStrip => glow::TRIANGLE_STRIP,
         }
     }
 
