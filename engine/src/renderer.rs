@@ -41,7 +41,13 @@ impl Renderer {
             .with_color_texture()?
             .with_depth_render_buffer()?
             .build()?;
-        let pp_pipeline = PostProcessingPipeline::new(Rc::clone(&gfx), screen_quad, screen_shader);
+        let pp_pipeline = PostProcessingPipeline::new(
+            Rc::clone(&gfx),
+            screen_width,
+            screen_height,
+            screen_quad,
+            screen_shader,
+        )?;
         Ok(Self {
             gfx,
             skybox,

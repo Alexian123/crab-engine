@@ -1,18 +1,17 @@
-mod stage_renderer;
-
 use std::rc::Rc;
 
 pub use crate::GfxContext;
 pub use crate::gfx::buffers::{TextureObject, TextureTarget};
-pub use crate::renderer::{Mesh, ShaderProgram};
-pub use stage_renderer::StageRenderer;
+pub use crate::renderer::{Framebuffer, FramebufferBuilder, Mesh, ShaderProgram};
 
 pub trait PostProcessingStage {
-    fn run(&self, texture: &TextureObject, screen_quad: &Mesh) -> &TextureObject;
+    fn bind(&self, input_texture: &TextureObject);
 }
 
 pub struct PostProcessingPipeline {
     gfx: Rc<GfxContext>,
+    framebuffer_a: Framebuffer,
+    framebuffer_b: Framebuffer,
     screen_quad: Rc<Mesh>,
     screen_shader: Rc<ShaderProgram>,
     pub(super) stages: Vec<Box<dyn PostProcessingStage>>,
@@ -21,15 +20,25 @@ pub struct PostProcessingPipeline {
 impl PostProcessingPipeline {
     pub fn new(
         gfx: Rc<GfxContext>,
+        screen_width: u32,
+        screen_height: u32,
         screen_quad: Rc<Mesh>,
         screen_shader: Rc<ShaderProgram>,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, String> {
+        let framebuffer_a = FramebufferBuilder::new(Rc::clone(&gfx), screen_width, screen_height)?
+            .with_color_texture()?
+            .build()?;
+        let framebuffer_b = FramebufferBuilder::new(Rc::clone(&gfx), screen_width, screen_height)?
+            .with_color_texture()?
+            .build()?;
+        Ok(Self {
             gfx,
+            framebuffer_a,
+            framebuffer_b,
             screen_quad,
             screen_shader,
             stages: Vec::new(),
-        }
+        })
     }
 
     pub fn run(&self, color_texture: &TextureObject) {
@@ -37,8 +46,17 @@ impl PostProcessingPipeline {
 
         // render each stage
         let mut current_texture = color_texture;
-        for stage in &self.stages {
-            current_texture = stage.run(current_texture, &self.screen_quad);
+        for (index, stage) in self.stages.iter().enumerate() {
+            stage.bind(current_texture);
+            let current_framebuffer = if index % 2 == 0 {
+                &self.framebuffer_a
+            } else {
+                &self.framebuffer_b
+            };
+            self.render_stage(current_framebuffer);
+            current_texture = current_framebuffer
+                .color_texture()
+                .expect("No color texture available in FBO");
         }
 
         // present to screen
@@ -55,6 +73,13 @@ impl PostProcessingPipeline {
     fn end(&self) {
         self.gfx.set_depth_test(true);
         self.screen_quad.unbind();
+    }
+
+    fn render_stage(&self, framebuffer: &Framebuffer) {
+        framebuffer.bind();
+        self.gfx.clear(GfxContext::COLOR_BUFFER_BIT);
+        self.screen_quad.draw();
+        framebuffer.unbind();
     }
 
     fn present(&self, output_texture: &TextureObject) {

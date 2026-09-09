@@ -59,7 +59,7 @@ impl Mesh {
             vao,
             vbo,
             ebo,
-            vertex_count: vertices.len() * layout.attribs[0].format.size() / stride,
+            vertex_count: vertices.len() * std::mem::size_of::<f32>() / stride,
             index_count: indices.len(),
         })
     }

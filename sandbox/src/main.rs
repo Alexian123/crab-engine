@@ -16,6 +16,7 @@ use std::rc::Rc;
 use winit::dpi::PhysicalSize;
 use winit::event::MouseButton;
 use winit::keyboard::KeyCode;
+use winit::window::WindowButtons;
 use winit::window::{CursorGrabMode, Window};
 
 struct Sandbox {
@@ -36,6 +37,11 @@ impl Application for Sandbox {
             .set_cursor_grab(CursorGrabMode::Locked)
             .expect("Failed to grab cursor");
         window.set_cursor_visible(false);
+        window.set_resizable(false);
+        window.set_enabled_buttons(WindowButtons::union(
+            WindowButtons::CLOSE,
+            WindowButtons::MINIMIZE,
+        ));
 
         gfx.set_clear_color(0.1, 0.1, 0.15, 1.0);
         gfx.set_depth_test(true);
@@ -293,22 +299,28 @@ impl Application for Sandbox {
                 Path::new("./assets/shaders/postprocessing/blur/blur.frag"),
             )
             .expect("Failed to load horizontal blur shader");
+
+        let _hblur = postprocess_fx::HBlur::new(
+            Rc::clone(gfx),
+            self.window_width,
+            Rc::clone(&hblur_shader),
+            1.0,
+        );
+        //renderer.add_post_processing_stage(Box::new(_hblur));
+
         let vblur_shader = loader
             .load_shader(
                 Path::new("./assets/shaders/postprocessing/blur/vblur.vert"),
                 Path::new("./assets/shaders/postprocessing/blur/blur.frag"),
             )
             .expect("Failed to load vertical blur shader");
-
-        let _blur = postprocess_fx::Blur::new(
+        let _vblur = postprocess_fx::VBlur::new(
             Rc::clone(gfx),
-            self.window_width,
             self.window_height,
-            Rc::clone(&hblur_shader),
             Rc::clone(&vblur_shader),
             1.0,
         );
-        //renderer.add_post_processing_stage(Box::new(blur));
+        //renderer.add_post_processing_stage(Box::new(_vblur));
 
         let contrast_shader = loader
             .load_shader(
@@ -316,13 +328,8 @@ impl Application for Sandbox {
                 Path::new("./assets/shaders/postprocessing/contrast/contrast.frag"),
             )
             .expect("Failed to load contrast shader");
-        let contrast_changer = postprocess_fx::ContrastChanger::new(
-            Rc::clone(gfx),
-            self.window_width,
-            self.window_height,
-            Rc::clone(&contrast_shader),
-            0.1,
-        );
+        let contrast_changer =
+            postprocess_fx::ContrastChanger::new(Rc::clone(gfx), Rc::clone(&contrast_shader), 0.1);
         renderer.add_post_processing_stage(Box::new(contrast_changer));
 
         tracing::info!("Done.");
