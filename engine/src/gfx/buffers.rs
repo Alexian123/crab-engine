@@ -15,17 +15,18 @@ pub enum FrameBufferRenderBufferAttachment {
     Depth,
 }
 
-pub enum VertexBufferTarget {
+pub enum BufferTarget {
     Array,
     Element,
+    Uniform,
 }
 
-pub enum VertexBufferDataUsage {
+pub enum BufferDataUsage {
     StaticDraw,
     DynamicDraw,
 }
 
-pub struct VertexBufferObject {
+pub struct BufferObject {
     pub(super) internal_buffer: glow::Buffer,
 }
 

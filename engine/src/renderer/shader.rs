@@ -8,6 +8,7 @@ use std::rc::Rc;
 pub struct ShaderProgram {
     gfx: Rc<GfxContext>,
     uniform_cache: RefCell<HashMap<String, UniformLocationObject>>,
+    block_index_cache: RefCell<HashMap<String, u32>>,
     program: ProgramObject,
 }
 
@@ -62,6 +63,7 @@ impl ShaderProgram {
         Ok(Self {
             gfx,
             uniform_cache: RefCell::new(HashMap::new()),
+            block_index_cache: RefCell::new(HashMap::new()),
             program,
         })
     }
@@ -94,6 +96,29 @@ impl ShaderProgram {
         }
 
         location
+    }
+
+    pub fn bind_uniform_block(&self, name: &str, binding: u32) {
+        if let Some(index) = self.get_uniform_block_index(name) {
+            self.gfx
+                .uniform_block_binding(&self.program, index, binding);
+        }
+    }
+
+    fn get_uniform_block_index(&self, name: &str) -> Option<u32> {
+        if let Some(index) = self.block_index_cache.borrow().get(name) {
+            return Some(*index);
+        }
+
+        let index = self.gfx.get_uniform_block_index(&self.program, name);
+
+        if let Some(index) = index {
+            self.block_index_cache
+                .borrow_mut()
+                .insert(name.to_owned(), index);
+        }
+
+        index
     }
 }
 

@@ -6,6 +6,7 @@ pub mod postprocessing;
 mod shader;
 mod skybox;
 mod texture;
+pub mod ubo;
 mod uniform;
 
 use crate::GfxContext;
@@ -21,6 +22,7 @@ pub use shader::ShaderProgram;
 pub use skybox::Skybox;
 use std::rc::Rc;
 pub use texture::{Sampler2D, SamplerCube, TextureSampler};
+pub use ubo::Ubo;
 
 pub struct Renderer {
     gfx: Rc<GfxContext>,

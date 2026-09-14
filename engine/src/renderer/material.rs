@@ -14,6 +14,10 @@ impl Material {
     pub const MAX_TEXTURES: usize = 16;
 
     pub fn new(shader: Rc<ShaderProgram>) -> Self {
+        shader.bind();
+        shader.bind_uniform_block("CameraMatrices", 0);
+        shader.unbind();
+
         Self {
             shader,
             textures: Vec::with_capacity(16),

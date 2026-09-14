@@ -276,20 +276,20 @@ impl GfxContext {
         }
     }
 
-    pub fn create_buffer(&self) -> Result<VertexBufferObject, String> {
+    pub fn create_buffer(&self) -> Result<BufferObject, String> {
         let buffer = unsafe { self.gl.create_buffer()? };
-        Ok(VertexBufferObject {
+        Ok(BufferObject {
             internal_buffer: buffer,
         })
     }
 
-    pub fn delete_buffer(&self, buffer: &VertexBufferObject) {
+    pub fn delete_buffer(&self, buffer: &BufferObject) {
         unsafe {
             self.gl.delete_buffer(buffer.internal_buffer);
         }
     }
 
-    pub fn bind_buffer(&self, target: VertexBufferTarget, buffer: Option<&VertexBufferObject>) {
+    pub fn bind_buffer(&self, target: BufferTarget, buffer: Option<&BufferObject>) {
         unsafe {
             self.gl.bind_buffer(
                 self.get_target_u32(target),
@@ -298,19 +298,34 @@ impl GfxContext {
         }
     }
 
-    fn get_target_u32(&self, target: VertexBufferTarget) -> u32 {
-        match target {
-            VertexBufferTarget::Array => glow::ARRAY_BUFFER,
-            VertexBufferTarget::Element => glow::ELEMENT_ARRAY_BUFFER,
+    pub fn bind_buffer_range(
+        &self,
+        target: BufferTarget,
+        index: u32,
+        buffer: Option<&BufferObject>,
+        offset: i32,
+        size: i32,
+    ) {
+        unsafe {
+            self.gl.bind_buffer_range(
+                self.get_target_u32(target),
+                index,
+                buffer.map(|b| b.internal_buffer),
+                offset,
+                size,
+            );
         }
     }
 
-    pub fn set_buffer_data_u8(
-        &self,
-        target: VertexBufferTarget,
-        usage: VertexBufferDataUsage,
-        data: &[u8],
-    ) {
+    fn get_target_u32(&self, target: BufferTarget) -> u32 {
+        match target {
+            BufferTarget::Array => glow::ARRAY_BUFFER,
+            BufferTarget::Element => glow::ELEMENT_ARRAY_BUFFER,
+            BufferTarget::Uniform => glow::UNIFORM_BUFFER,
+        }
+    }
+
+    pub fn set_buffer_data_u8(&self, target: BufferTarget, usage: BufferDataUsage, data: &[u8]) {
         unsafe {
             self.gl.buffer_data_u8_slice(
                 self.get_target_u32(target),
@@ -320,10 +335,24 @@ impl GfxContext {
         }
     }
 
-    fn get_usage_u32(&self, usage: VertexBufferDataUsage) -> u32 {
+    pub fn set_buffer_data_size(&self, target: BufferTarget, size: i32, usage: BufferDataUsage) {
+        unsafe {
+            self.gl
+                .buffer_data_size(self.get_target_u32(target), size, self.get_usage_u32(usage));
+        }
+    }
+
+    pub fn set_buffer_sub_data_u8(&self, target: BufferTarget, offset: i32, data: &[u8]) {
+        unsafe {
+            self.gl
+                .buffer_sub_data_u8_slice(self.get_target_u32(target), offset, data);
+        }
+    }
+
+    fn get_usage_u32(&self, usage: BufferDataUsage) -> u32 {
         match usage {
-            VertexBufferDataUsage::StaticDraw => glow::STATIC_DRAW,
-            VertexBufferDataUsage::DynamicDraw => glow::DYNAMIC_DRAW,
+            BufferDataUsage::StaticDraw => glow::STATIC_DRAW,
+            BufferDataUsage::DynamicDraw => glow::DYNAMIC_DRAW,
         }
     }
 
@@ -662,6 +691,20 @@ impl GfxContext {
     pub fn use_program(&self, program: Option<&ProgramObject>) {
         unsafe {
             self.gl.use_program(program.map(|p| p.internal_program));
+        }
+    }
+
+    pub fn get_uniform_block_index(&self, program: &ProgramObject, name: &str) -> Option<u32> {
+        unsafe {
+            self.gl
+                .get_uniform_block_index(program.internal_program, name)
+        }
+    }
+
+    pub fn uniform_block_binding(&self, program: &ProgramObject, index: u32, binding: u32) {
+        unsafe {
+            self.gl
+                .uniform_block_binding(program.internal_program, index, binding);
         }
     }
 

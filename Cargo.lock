@@ -2064,6 +2064,7 @@ dependencies = [
 name = "sandbox"
 version = "0.1.0"
 dependencies = [
+ "bytemuck",
  "engine",
  "glam 0.29.3",
  "rand 0.8.7",
