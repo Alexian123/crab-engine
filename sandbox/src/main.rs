@@ -3,13 +3,13 @@ mod postprocess_fx;
 
 use engine::GfxContext;
 use engine::loader::Loader;
+use engine::renderer::Renderer;
 use engine::renderer::camera::*;
-use engine::renderer::{Renderer, Ubo};
 use engine::scene::terrain::{self, get_height_at_point};
 use engine::scene::*;
 use engine::ui::*;
 use engine::{Application, InputManager, run};
-use glam::{Mat4, Quat, Vec3};
+use glam::{Quat, Vec3};
 use movement::MovementController;
 use rand::Rng;
 use std::path::Path;
@@ -23,7 +23,6 @@ use winit::window::{CursorGrabMode, Window};
 struct Sandbox {
     loader: Option<Loader>,
     renderer: Option<Renderer>,
-    matrices_ubo: Option<Ubo>,
     scene: Scene,
     movement_ctrl: MovementController,
     window_width: u32,
@@ -51,11 +50,6 @@ impl Application for Sandbox {
         gfx.set_cull_face_back();
         gfx.set_front_face_ccw();
         gfx.set_face_culling(true);
-
-        self.matrices_ubo = Some(
-            Ubo::new(Rc::clone(gfx), 2 * std::mem::size_of::<Mat4>(), 0)
-                .expect("Failed to create Camera Matrices UBO"),
-        );
 
         self.loader = Some(Loader::new(Rc::clone(gfx)));
 
@@ -399,20 +393,12 @@ impl Application for Sandbox {
     }
 
     fn render(&mut self, _window: &Window, _gfx: &Rc<GfxContext>) {
-        // update camera matrices ubo
-        let camera = self.movement_ctrl.get_active_camera();
-        let matrices_ubo = self.matrices_ubo.as_ref().unwrap();
-        matrices_ubo.store(0, bytemuck::cast_slice(camera.projection().as_ref()));
-        matrices_ubo.store(
-            std::mem::size_of::<Mat4>(),
-            bytemuck::cast_slice(camera.view().as_ref()),
-        );
-
         // render scene and apply post-processing
-        self.renderer
-            .as_ref()
-            .unwrap()
-            .render(&self.scene, camera, self.ui.as_ref());
+        self.renderer.as_ref().unwrap().render(
+            &self.scene,
+            self.movement_ctrl.get_active_camera(),
+            self.ui.as_ref(),
+        );
     }
 
     fn on_resize(&mut self, width: u32, height: u32, gfx: &Rc<GfxContext>) {
@@ -430,7 +416,6 @@ fn main() {
     let app = Sandbox {
         loader: None,
         renderer: None,
-        matrices_ubo: None,
         scene: Scene::new(),
         movement_ctrl: MovementController::new(
             FlyCamera::new(

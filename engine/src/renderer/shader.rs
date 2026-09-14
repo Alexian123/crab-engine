@@ -60,12 +60,21 @@ impl ShaderProgram {
         gfx.delete_shader(&vertex_shader);
         gfx.delete_shader(&fragment_shader);
 
-        Ok(Self {
+        let shader = Self {
             gfx,
             uniform_cache: RefCell::new(HashMap::new()),
             block_index_cache: RefCell::new(HashMap::new()),
             program,
-        })
+        };
+
+        // Try to bind all default uniform blocks if they exist
+        shader.bind();
+        shader.bind_uniform_block("CameraData", 0);
+        shader.bind_uniform_block("TransformData", 1);
+        shader.bind_uniform_block("LightingData", 2);
+        shader.unbind();
+
+        Ok(shader)
     }
 
     pub fn bind(&self) {

@@ -5,7 +5,6 @@ use std::rc::Rc;
 pub struct Ubo {
     gfx: Rc<GfxContext>,
     buffer: BufferObject,
-    size: usize,
 }
 
 impl Ubo {
@@ -19,7 +18,7 @@ impl Ubo {
         );
         gfx.bind_buffer(BufferTarget::Uniform, None);
         gfx.bind_buffer_range(BufferTarget::Uniform, index, Some(&buffer), 0, size as i32);
-        Ok(Self { gfx, buffer, size })
+        Ok(Self { gfx, buffer })
     }
 
     pub fn store(&self, offset: usize, data: &[u8]) {
@@ -28,10 +27,6 @@ impl Ubo {
         self.gfx
             .set_buffer_sub_data_u8(BufferTarget::Uniform, offset as i32, data);
         self.gfx.bind_buffer(BufferTarget::Uniform, None);
-    }
-
-    pub fn size(&self) -> usize {
-        self.size
     }
 }
 

@@ -1,18 +1,8 @@
 #version 330 core
 
+#include "common/camera.glsl"
+#include "common/material.glsl"
 #include "common/lighting.glsl"
-
-#define MAX_NUM_TEXTURES        16
-#define MAX_NUM_DIR_LIGHTS      4
-#define MAX_NUM_POINT_LIGHTS    8
-#define MAX_NUM_SPOT_LIGHTS     2
-
-struct Material
-{
-    uint indexMask; // b[0:3] = diffuseIndex, b[4:7] = specularIndex, b[8:11] = emissionIndex, b[12:15] = free
-    uint useMask; // b[0] = useDiffuse, b[1] = useSpecular, b[2] = useEmission, b[3:15] = free
-    float shininess;
-};
 
 in vec3 vColor;
 in vec2 vUV;
@@ -21,22 +11,14 @@ in vec3 vFragPos;
 
 out vec4 FragColor;
 
-uniform sampler2D uTextures[MAX_NUM_TEXTURES];
-uniform Material uMaterial;
-uniform vec3 uViewPos;
-uniform DirLight uDirLights[MAX_NUM_DIR_LIGHTS];
-uniform PointLight uPointLights[MAX_NUM_POINT_LIGHTS];
-uniform SpotLight uSpotLights[MAX_NUM_SPOT_LIGHTS];
-uniform uint uNumLightsMask; // b[0:7] = numDirLights, b[8:15] = numPointLights, b[16:23] = numSpotLights, b[24:31] = free
-
 void main() {
-    int diffuseIndex = int(uMaterial.indexMask & 0xFu);
-    int specularIndex = int((uMaterial.indexMask >> 4) & 0xFu);
-    int emissionIndex = int((uMaterial.indexMask >> 8) & 0xFu);
+    int diffuseIndex = getDiffuseIndex(uMaterial.indexMask);
+    int specularIndex = getSpecularIndex(uMaterial.indexMask);
+    int emissionIndex = getEmissionIndex(uMaterial.indexMask);
 
-    int useDiffuse = int((uMaterial.useMask >> 0) & 1u);
-    int useSpecular = int((uMaterial.useMask >> 1) & 1u);
-    int useEmission = int((uMaterial.useMask >> 2) & 1u);
+    int useDiffuse = getUseDiffuse(uMaterial.useMask);
+    int useSpecular = getUseSpecular(uMaterial.useMask);
+    int useEmission = getUseEmission(uMaterial.useMask);
 
     Surface surface;
     surface.diffuseColor = texture(uTextures[diffuseIndex], vUV).rgb * useDiffuse;
@@ -46,9 +28,9 @@ void main() {
     surface.viewDir = normalize(uViewPos - vFragPos);
     surface.shininess = uMaterial.shininess;
 
-    int numDirLights = int(uNumLightsMask & 0xFFu);
-    int numPointLights = int((uNumLightsMask >> 8) & 0xFFu);
-    int numSpotLights = int((uNumLightsMask >> 16) & 0xFFu);
+    int numDirLights = getNumDirLights(uNumLightsMask);
+    int numPointLights = getNumPointLights(uNumLightsMask);
+    int numSpotLights = getNumSpotLights(uNumLightsMask);
 
     // directional lights
     vec3 result = vec3(0.0);

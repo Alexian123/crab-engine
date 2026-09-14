@@ -16,17 +16,10 @@ impl Skybox {
         }
     }
 
-    pub fn shader(&self) -> &ShaderProgram {
-        &self.shader
-    }
-
-    pub fn bind(&self) {
+    pub fn draw(&self) {
         self.shader.bind();
         self.mesh.bind();
         self.sampler.bind(0);
-    }
-
-    pub fn draw(&self) {
         self.mesh.draw();
     }
 }

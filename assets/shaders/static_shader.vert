@@ -1,5 +1,8 @@
 #version 330 core
 
+#include "common/camera.glsl"
+#include "common/transform.glsl"
+
 layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aColor;
 layout(location = 2) in vec2 aUV;
@@ -9,14 +12,6 @@ out vec3 vColor;
 out vec2 vUV;
 out vec3 vNormal;
 out vec3 vFragPos;
-
-layout (std140) uniform CameraMatrices {
-    mat4 uProjection;
-    mat4 uView;
-};
-
-uniform mat4 uModel;
-uniform mat4 uNormal;
 
 void main() {
     vec4 fragPos = uModel * vec4(aPos, 1.0);
