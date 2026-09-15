@@ -1,10 +1,10 @@
 mod movement;
-mod postprocess_fx;
 
 use engine::GfxContext;
 use engine::loader::Loader;
 use engine::renderer::Renderer;
 use engine::renderer::camera::*;
+use engine::renderer::postprocessing::{ContrastChanger, HBlur, VBlur};
 use engine::scene::terrain::{self, get_height_at_point};
 use engine::scene::*;
 use engine::ui::*;
@@ -51,21 +51,27 @@ impl Application for Sandbox {
         gfx.set_front_face_ccw();
         gfx.set_face_culling(true);
 
-        self.loader = Some(Loader::new(Rc::clone(gfx)));
+        self.loader = Some(Loader::new(
+            Rc::clone(&gfx),
+            std::env::current_exe()
+                .expect("Failed to get executable path")
+                .parent()
+                .expect("Executable has no parent directory")
+                .join("assets"),
+        ));
+        let mut loader = self.loader.as_mut().unwrap();
 
         tracing::info!("Scene initialization started");
-
-        let loader = self.loader.as_mut().unwrap();
 
         tracing::info!("Loading terrain...");
 
         let terrain_material = loader
-            .load_material(Path::new("./assets/materials/terrain.mat"), None)
+            .load_material(Path::new("materials/terrain.mat"), None)
             .unwrap();
 
         terrain::generate_terrain_grid(
             self.scene.world_mut(),
-            loader,
+            &mut loader,
             0xdeadbeef,
             2,
             -10.0,
@@ -151,8 +157,11 @@ impl Application for Sandbox {
 
         tracing::info!("Loading skybox");
 
+        let skybox_shader = loader
+            .load_shader_embedded(&engine::loader::DEFAULT_SKYBOX_SHADER)
+            .expect("Failed to load skybox shader");
         let skybox = loader.load_skybox(
-            Path::new("./assets/textures/skybox/"),
+            Path::new("textures/skybox/"),
             [
                 "right.jpg",
                 "left.jpg",
@@ -161,20 +170,17 @@ impl Application for Sandbox {
                 "front.jpg",
                 "back.jpg",
             ],
-            Path::new("./assets/shaders/skybox.vert"),
-            Path::new("./assets/shaders/skybox.frag"),
+            skybox_shader,
         );
 
         tracing::info!("Done.");
 
         tracing::info!("Loading asset models...");
 
-        let cube_mesh = loader
-            .load_mesh(Path::new("./assets/models//Cube.mesh"))
-            .unwrap();
+        let cube_mesh = loader.load_mesh(Path::new("models/Cube.mesh")).unwrap();
 
         let crate_material = loader
-            .load_material(Path::new("./assets/materials/crate.mat"), None)
+            .load_material(Path::new("materials/crate.mat"), None)
             .unwrap();
 
         let crate_entity = world.create_entity();
@@ -201,9 +207,7 @@ impl Application for Sandbox {
 
         let backpack = loader
             .load_model(
-                Path::new(
-                    "./assets/models/survival_guitar_backpack/survival_guitar_backpack.glb.model",
-                ),
+                Path::new("models/survival_guitar_backpack/survival_guitar_backpack.glb.model"),
                 &mut self.scene,
             )
             .expect("Failed to load backpack model");
@@ -216,10 +220,7 @@ impl Application for Sandbox {
         backpack_transform.scale = Vec3::new(0.01, 0.01, 0.01);
 
         let pug = loader
-            .load_model(
-                Path::new("./assets/models/pug/a_pug.glb.model"),
-                &mut self.scene,
-            )
+            .load_model(Path::new("models/pug/a_pug.glb.model"), &mut self.scene)
             .expect("Failed to load pug model");
         let pug_transform = self
             .scene
@@ -231,7 +232,7 @@ impl Application for Sandbox {
 
         let rat = loader
             .load_model(
-                Path::new("./assets/models/rat/street_rat_1k.gltf.model"),
+                Path::new("models/rat/street_rat_1k.gltf.model"),
                 &mut self.scene,
             )
             .expect("Failed to load rat model");
@@ -255,7 +256,7 @@ impl Application for Sandbox {
 
             let tree = loader
                 .load_model(
-                    Path::new("./assets/models/palm_tree/quiver_tree_02_1k.gltf.model"),
+                    Path::new("models/palm_tree/quiver_tree_02_1k.gltf.model"),
                     &mut self.scene,
                 )
                 .expect("Failed to load palm tree model");
@@ -279,15 +280,10 @@ impl Application for Sandbox {
         self.renderer = Some(
             Renderer::new(
                 Rc::clone(gfx),
+                loader,
                 skybox,
                 self.window_width,
                 self.window_height,
-                loader
-                    .load_screen_quad()
-                    .expect("Failed to load screen quad"),
-                loader
-                    .load_screen_quad_shader()
-                    .expect("Failed to load textured quad shader"),
             )
             .expect("Failed to create renderer"),
         );
@@ -297,60 +293,24 @@ impl Application for Sandbox {
 
         let renderer = self.renderer.as_mut().expect("Renderer missing");
 
-        let hblur_shader = loader
-            .load_shader(
-                Path::new("./assets/shaders/postprocessing/blur/hblur.vert"),
-                Path::new("./assets/shaders/postprocessing/blur/blur.frag"),
-            )
-            .expect("Failed to load horizontal blur shader");
-
-        let _hblur = postprocess_fx::HBlur::new(
-            Rc::clone(gfx),
-            self.window_width,
-            Rc::clone(&hblur_shader),
-            1.0,
-        );
+        let _hblur = HBlur::new(Rc::clone(gfx), self.window_width, loader, 1.0);
         //renderer.add_post_processing_stage(Box::new(_hblur));
 
-        let vblur_shader = loader
-            .load_shader(
-                Path::new("./assets/shaders/postprocessing/blur/vblur.vert"),
-                Path::new("./assets/shaders/postprocessing/blur/blur.frag"),
-            )
-            .expect("Failed to load vertical blur shader");
-        let _vblur = postprocess_fx::VBlur::new(
-            Rc::clone(gfx),
-            self.window_height,
-            Rc::clone(&vblur_shader),
-            1.0,
-        );
+        let _vblur = VBlur::new(Rc::clone(gfx), self.window_height, loader, 1.0);
         //renderer.add_post_processing_stage(Box::new(_vblur));
 
-        let contrast_shader = loader
-            .load_shader(
-                Path::new("./assets/shaders/postprocessing/contrast/contrast.vert"),
-                Path::new("./assets/shaders/postprocessing/contrast/contrast.frag"),
-            )
-            .expect("Failed to load contrast shader");
-        let contrast_changer =
-            postprocess_fx::ContrastChanger::new(Rc::clone(gfx), Rc::clone(&contrast_shader), 0.1);
+        let contrast_changer = ContrastChanger::new(Rc::clone(gfx), loader, 0.1);
         renderer.add_post_processing_stage(Box::new(contrast_changer));
 
         tracing::info!("Done.");
 
         tracing::info!("Loading UI...");
 
-        let ui_shader = loader
-            .load_ui_quad_shader()
-            .expect("Failed to load UI quad shader");
-
-        let ui_mesh = loader.load_ui_quad().expect("Failed to load UI quad mesh");
-
-        self.ui = Some(UI::new(ui_shader, ui_mesh));
+        self.ui = Some(UI::new(&mut loader));
         let ui = self.ui.as_mut().unwrap();
 
         let hud_texture = loader
-            .load_sampler_2d_texture(Path::new("./assets/textures/HUD/mmorpg.png"))
+            .load_sampler_2d_texture(Path::new("textures/HUD/mmorpg.png"))
             .expect("Failed to load HUD texture");
         ui.hud.push(HUDElement {
             texture: hud_texture,

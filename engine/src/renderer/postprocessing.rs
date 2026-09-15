@@ -1,8 +1,13 @@
+mod blur;
+mod contrast;
+
 use std::rc::Rc;
 
 pub use crate::GfxContext;
 pub use crate::gfx::buffers::{TextureObject, TextureTarget};
 pub use crate::renderer::{Framebuffer, FramebufferBuilder, Mesh, ShaderProgram};
+pub use blur::{HBlur, VBlur};
+pub use contrast::ContrastChanger;
 
 pub trait PostProcessingStage {
     fn bind(&self, input_texture: &TextureObject);

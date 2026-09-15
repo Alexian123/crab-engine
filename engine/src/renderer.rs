@@ -11,6 +11,7 @@ pub mod ubo;
 mod uniform;
 
 use crate::GfxContext;
+use crate::loader::*;
 use crate::scene::*;
 use crate::ui::*;
 use camera::Camera;
@@ -39,22 +40,26 @@ pub struct Renderer {
 impl Renderer {
     pub fn new(
         gfx: Rc<GfxContext>,
+        loader: &mut Loader,
         skybox: Option<Rc<Skybox>>,
         screen_width: u32,
         screen_height: u32,
-        screen_quad: Rc<Mesh>,
-        screen_shader: Rc<ShaderProgram>,
     ) -> Result<Self, String> {
         let framebuffer = FramebufferBuilder::new(Rc::clone(&gfx), screen_width, screen_height)?
             .with_color_texture()?
             .with_depth_render_buffer()?
             .build()?;
+
         let pp_pipeline = PostProcessingPipeline::new(
             Rc::clone(&gfx),
             screen_width,
             screen_height,
-            screen_quad,
-            screen_shader,
+            loader
+                .load_screen_quad()
+                .expect("Failed to load screen quad"),
+            loader
+                .load_shader_embedded(&DEFAULT_PRESENT_SHADER)
+                .expect("Failed to load textured quad shader"),
         )?;
 
         let camera_data = Ubo::new(Rc::clone(&gfx), std::mem::size_of::<GpuCameraData>(), 0)?;

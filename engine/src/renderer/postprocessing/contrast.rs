@@ -1,4 +1,5 @@
-use engine::renderer::postprocessing::*;
+use super::*;
+use crate::loader::*;
 
 use std::rc::Rc;
 
@@ -8,7 +9,10 @@ pub struct ContrastChanger {
 }
 
 impl ContrastChanger {
-    pub fn new(gfx: Rc<GfxContext>, shader: Rc<ShaderProgram>, contrast_value: f32) -> Self {
+    pub fn new(gfx: Rc<GfxContext>, loader: &mut Loader, contrast_value: f32) -> Self {
+        let shader = loader
+            .load_shader_embedded(&DEFAULT_CONTRAST_SHADER)
+            .expect("Failed to load contrast shader");
         shader.bind();
         shader.set_uniform("uColorTexture", &(0 as i32));
         shader.set_uniform("uContrast", &contrast_value);

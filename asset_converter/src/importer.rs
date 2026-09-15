@@ -172,8 +172,8 @@ impl Importer {
         let mut material = MaterialAsset {
             name: String::from(as_material.name()),
             shader: ShaderDesc {
-                vertex: String::from("./assets/shaders/static_shader.vert"),
-                fragment: String::from("./assets/shaders/static_shader.frag"),
+                vertex: String::from(""),
+                fragment: String::from(""),
             },
             textures: Vec::new(),
             params: MaterialParams {

@@ -18,6 +18,12 @@ pub enum ShaderLoadError {
     Preprocess(#[from] crate::utils::shader_preprocessor::ShaderPreprocessError),
 }
 
+#[derive(Hash, Eq, PartialEq, Clone)]
+pub struct EmbeddedShader {
+    pub vertex_path: &'static str,
+    pub fragment_path: &'static str,
+}
+
 #[derive(Hash, Eq, PartialEq)]
 struct ShaderKey {
     vertex: PathBuf,
@@ -27,6 +33,7 @@ struct ShaderKey {
 pub struct ShaderLoader {
     gfx: Rc<GfxContext>,
     cache: HashMap<ShaderKey, Rc<ShaderProgram>>,
+    embedded_cache: HashMap<EmbeddedShader, Rc<ShaderProgram>>,
 }
 
 impl ShaderLoader {
@@ -34,91 +41,28 @@ impl ShaderLoader {
         Self {
             gfx,
             cache: HashMap::new(),
+            embedded_cache: HashMap::new(),
         }
     }
 
-    pub fn load_ui_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
-        let vert_path = PathBuf::from("ui_quad.vert");
-        let frag_path = PathBuf::from("ui_quad.frag");
-        let key = ShaderKey {
-            vertex: vert_path,
-            fragment: frag_path,
-        };
-
-        if let Some(shader) = self.cache.get(&key) {
+    pub fn load_embedded(
+        &mut self,
+        embedded_shader: &EmbeddedShader,
+    ) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
+        if let Some(shader) = self.embedded_cache.get(embedded_shader) {
             return Ok(Rc::clone(shader));
         }
 
-        let vertex_source = "
-            #version 330 core
-            layout(location = 0) in vec2 aPos;
-            out vec2 vUV;
-            uniform mat4 uTransform;
-            void main(void) {
-               	gl_Position = uTransform * vec4(aPos, 0.0, 1.0);
-               	vUV = vec2((aPos.x + 1.0) / 2.0, 1.0 - (aPos.y + 1.0) / 2.0);
-            }
-        ";
-
-        let fragment_source = "
-            #version 330 core
-            in vec2 vUV;
-            out vec4 FragColor;
-            uniform sampler2D uUITexture;
-            void main(void) {
-                FragColor = texture(uUITexture, vUV);
-            }
-        ";
+        let vertex_source = preprocess_shader(&embedded_shader.vertex_path)?;
+        let fragment_source = preprocess_shader(&embedded_shader.fragment_path)?;
 
         let shader = Rc::new(
             ShaderProgram::new(Rc::clone(&self.gfx), &vertex_source, &fragment_source)
                 .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
         );
 
-        self.cache.insert(key, Rc::clone(&shader));
-
-        Ok(shader)
-    }
-
-    pub fn load_screen_quad_shader(&mut self) -> Result<Rc<ShaderProgram>, ShaderLoadError> {
-        let vert_path = PathBuf::from("screen_quad.vert");
-        let frag_path = PathBuf::from("screen_quad.frag");
-        let key = ShaderKey {
-            vertex: vert_path,
-            fragment: frag_path,
-        };
-
-        if let Some(shader) = self.cache.get(&key) {
-            return Ok(Rc::clone(shader));
-        }
-
-        let vertex_source = "
-            #version 330 core
-            layout(location = 0) in vec2 aPos;
-            layout(location = 1) in vec2 aUV;
-            out vec2 vUV;
-            void main(void) {
-               	gl_Position = vec4(aPos, 0.0, 1.0);
-               	vUV = aUV;
-            }
-        ";
-
-        let fragment_source = "
-            #version 330 core
-            in vec2 vUV;
-            out vec4 FragColor;
-            uniform sampler2D uColorTexture;
-            void main(void) {
-                FragColor = texture(uColorTexture, vUV);
-            }
-        ";
-
-        let shader = Rc::new(
-            ShaderProgram::new(Rc::clone(&self.gfx), &vertex_source, &fragment_source)
-                .map_err(|e| ShaderLoadError::ShaderProgramCreate(e))?,
-        );
-
-        self.cache.insert(key, Rc::clone(&shader));
+        self.embedded_cache
+            .insert(embedded_shader.clone(), Rc::clone(&shader));
 
         Ok(shader)
     }

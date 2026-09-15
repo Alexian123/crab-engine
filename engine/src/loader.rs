@@ -1,3 +1,4 @@
+mod default_resources;
 mod material_file_loader;
 mod mesh_loader;
 mod model_file_loader;
@@ -10,6 +11,7 @@ use crate::scene::components::*;
 use crate::scene::set_parent;
 use crate::scene::{Entity, Scene};
 use crate::utils::HeightGenerator;
+pub use default_resources::*;
 use engine_asset::*;
 use glam::{Quat, Vec3};
 use material_file_loader::*;
@@ -23,6 +25,7 @@ use std::rc::Rc;
 use texture_loader::*;
 
 pub struct Loader {
+    asset_root: PathBuf,
     meshes: MeshLoader,
     shaders: ShaderLoader,
     textures: TextureLoader,
@@ -33,8 +36,9 @@ pub struct Loader {
 
 // TODO: DO NOT FAIL SILENTLY EVER
 impl Loader {
-    pub fn new(gfx: Rc<GfxContext>) -> Self {
+    pub fn new(gfx: Rc<GfxContext>, asset_root: PathBuf) -> Self {
         Self {
+            asset_root,
             meshes: MeshLoader::new(Rc::clone(&gfx)),
             shaders: ShaderLoader::new(Rc::clone(&gfx)),
             textures: TextureLoader::new(Rc::clone(&gfx)),
@@ -48,8 +52,7 @@ impl Loader {
         &mut self,
         faces_dir_path: &Path,
         face_images: [&str; 6],
-        vertex: &Path,
-        fragment: &Path,
+        shader: Rc<ShaderProgram>,
     ) -> Option<Rc<Skybox>> {
         let mesh = match self.meshes.load_skybox_cube() {
             Ok(mesh) => mesh,
@@ -58,8 +61,10 @@ impl Loader {
                 return None;
             }
         };
-        let shader = self.load_shader(vertex, fragment)?;
-        let sampler = match self.textures.load_cubemap(faces_dir_path, face_images) {
+        let sampler = match self
+            .textures
+            .load_cubemap(self.asset_root.join(faces_dir_path), face_images)
+        {
             Ok(sampler) => sampler,
             Err(err) => {
                 tracing::error!("Failed to load cubemap: {}", err);
@@ -70,7 +75,7 @@ impl Loader {
     }
 
     pub fn load_model(&mut self, path: &Path, scene: &mut Scene) -> Option<Entity> {
-        let path = std::fs::canonicalize(path).ok()?;
+        let path = std::fs::canonicalize(self.asset_root.join(path)).ok()?;
 
         if path.is_dir() || !path.parent()?.is_dir() {
             return None;
@@ -206,7 +211,7 @@ impl Loader {
         path: &Path,
         texture_dir: Option<&Path>, // None if material has absolute texture paths
     ) -> Option<Rc<Material>> {
-        let path = std::fs::canonicalize(path).ok()?;
+        let path = std::fs::canonicalize(self.asset_root.join(path)).ok()?;
 
         if let Some(cached_material) = self.material_cache.get(&path) {
             return Some(Rc::clone(cached_material));
@@ -214,10 +219,16 @@ impl Loader {
 
         match self.material_files.load(path.clone()) {
             Ok(material_file) => {
-                let shader = self.load_shader(
-                    Path::new(&material_file.shader.vertex),
-                    Path::new(&material_file.shader.fragment),
-                )?;
+                let shader = if material_file.shader.vertex.is_empty()
+                    || material_file.shader.fragment.is_empty()
+                {
+                    self.load_shader_embedded(&DEFAULT_3D_SHADER)
+                } else {
+                    self.load_shader(
+                        Path::new(&material_file.shader.vertex),
+                        Path::new(&material_file.shader.fragment),
+                    )
+                }?;
 
                 let mut material = Material::new(shader);
 
@@ -275,7 +286,7 @@ impl Loader {
     }
 
     pub fn load_mesh(&mut self, path: &Path) -> Option<Rc<Mesh>> {
-        match self.meshes.load(path) {
+        match self.meshes.load(self.asset_root.join(path)) {
             Ok(mesh) => Some(mesh),
             Err(err) => {
                 tracing::error!("Failed to load mesh: {}", err);
@@ -303,28 +314,24 @@ impl Loader {
         }
     }
 
-    pub fn load_ui_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
-        match self.shaders.load_ui_quad_shader() {
+    pub fn load_shader_embedded(
+        &mut self,
+        embedded_shader: &EmbeddedShader,
+    ) -> Option<Rc<ShaderProgram>> {
+        match self.shaders.load_embedded(embedded_shader) {
             Ok(shader) => Some(shader),
             Err(err) => {
-                tracing::error!("Failed to load shader: {}", err);
-                None
-            }
-        }
-    }
-
-    pub fn load_screen_quad_shader(&mut self) -> Option<Rc<ShaderProgram>> {
-        match self.shaders.load_screen_quad_shader() {
-            Ok(shader) => Some(shader),
-            Err(err) => {
-                tracing::error!("Failed to load shader: {}", err);
+                tracing::error!("Failed to load embedded shader: {}", err);
                 None
             }
         }
     }
 
     pub fn load_shader(&mut self, vertex: &Path, fragment: &Path) -> Option<Rc<ShaderProgram>> {
-        match self.shaders.load(vertex, fragment) {
+        match self
+            .shaders
+            .load(self.asset_root.join(vertex), self.asset_root.join(fragment))
+        {
             Ok(shader) => Some(shader),
             Err(err) => {
                 tracing::error!("Failed to load shader: {}", err);
@@ -334,7 +341,7 @@ impl Loader {
     }
 
     pub fn load_sampler_2d_texture(&mut self, path: &Path) -> Option<Rc<Sampler2D>> {
-        match self.textures.load_sampler_2d(path) {
+        match self.textures.load_sampler_2d(self.asset_root.join(path)) {
             Ok(texture) => Some(texture),
             Err(err) => {
                 tracing::error!("Failed to load texture: {}", err);

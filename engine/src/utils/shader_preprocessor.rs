@@ -6,6 +6,8 @@ use std::{
 
 use thiserror::Error;
 
+// TODO: include embedded shaders inside external shaders using <> instead of ""
+
 #[derive(Debug, Error)]
 pub enum ShaderPreprocessError {
     #[error("failed to read shader: {0}")]
